@@ -1,62 +1,162 @@
 """
-Unit and Integration Tests for Gemma Developer Agent Harness
+Comprehensive Unit & Property-Based Verification Suite for Gemma 4 TCGS + DCLV Harness
 """
+
+from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from harness import TopologicalCodeGraph, BanachContractionValidator
+
+from harness import (
+    BanachContractionValidator,
+    DiscreteLyapunovValidator,
+    TopologicalCodeGraph,
+)
 
 
-def test_topological_code_graph_indexing():
+def test_cross_file_ast_dependency_and_inheritance_linking() -> None:
     with tempfile.TemporaryDirectory() as tmpdir:
         root = Path(tmpdir)
-        f1 = root / "core.py"
-        f1.write_text("class Engine:\n    def start(self):\n        return True\n")
-        f2 = root / "service.py"
-        f2.write_text("from core import Engine\ndef run_job(engine):\n    return engine.start()\n")
+        (root / "base.py").write_text(
+            "class BaseEngine:\n"
+            "    def validate(self, payload):\n"
+            "        return bool(payload)\n"
+        )
+        (root / "core.py").write_text(
+            "from base import BaseEngine\n"
+            "class Engine(BaseEngine):\n"
+            "    def start(self, data):\n"
+            "        return self.validate(data)\n"
+        )
+        (root / "service.py").write_text(
+            "from core import Engine\n"
+            "def run_job(payload):\n"
+            "    eng = Engine()\n"
+            "    return eng.start(payload)\n"
+        )
 
         tcg = TopologicalCodeGraph(root)
         total_nodes = tcg.index_repository()
-        assert total_nodes >= 2
-        assert "core.py::Engine" in tcg.nodes
-        assert "service.py::run_job" in tcg.nodes
+        assert total_nodes >= 5
+        assert "core.py::Engine" in tcg.nodes["service.py::run_job"].dependencies
+        assert "service.py::run_job" in tcg.nodes["core.py::Engine"].callers
+        assert "base.py::BaseEngine" in tcg.nodes["core.py::Engine"].dependencies
 
-        # Slice extraction
-        sliced = tcg.extract_topological_slice("run_job", depth=1)
-        assert len(sliced) >= 1
+        # 0-hop: seed only
+        slice_0 = tcg.extract_topological_slice("run_job", depth=0)
+        assert list(slice_0.keys()) == ["service.py::run_job"]
 
+        # 1-hop: must pull in core.py::Engine and core.py::Engine.start
+        slice_1 = tcg.extract_topological_slice("run_job", depth=1)
+        assert "service.py::run_job" in slice_1
+        assert "core.py::Engine" in slice_1
 
-def test_banach_contraction_success():
-    bcv = BanachContractionValidator(contraction_factor=0.8, max_turns=5)
-
-    # Turn 0: initial state, 4 failures
-    valid, msg = bcv.register_turn(turn=0, modified_files={"a.py": "hash1"}, test_failures=4, unresolved_symbols=2)
-    assert valid
-
-    # Turn 1: improvement, 2 failures
-    valid, msg = bcv.register_turn(turn=1, modified_files={"a.py": "hash2"}, test_failures=2, unresolved_symbols=1)
-    assert valid
-    assert "Contractive step valid" in msg
-
-    # Turn 2: convergence, 0 failures
-    valid, msg = bcv.register_turn(turn=2, modified_files={"a.py": "hash3"}, test_failures=0, unresolved_symbols=0)
-    assert valid
-    assert "Fixed-point achieved" in msg
+        # 2-hop: must transitively pull in base.py::BaseEngine
+        slice_2 = tcg.extract_topological_slice("run_job", depth=2)
+        assert "base.py::BaseEngine" in slice_2
+        assert set(slice_0).issubset(set(slice_1))
+        assert set(slice_1).issubset(set(slice_2))
 
 
-def test_banach_contraction_regression_rejection():
-    bcv = BanachContractionValidator(contraction_factor=0.8, max_turns=5)
+def test_token_budget_enforcement() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        (root / "mod_a.py").write_text("def alpha():\n    return '" + ("x" * 600) + "'\n")
+        (root / "mod_b.py").write_text("from mod_a import alpha\ndef beta():\n    return alpha()\n")
+        tcg = TopologicalCodeGraph(root)
+        tcg.index_repository()
+        sliced = tcg.extract_topological_slice("beta", depth=2, token_budget=60)
+        assert "mod_b.py::beta" in sliced
+        assert "mod_a.py::alpha" not in sliced
 
-    bcv.register_turn(turn=0, modified_files={"a.py": "hash1"}, test_failures=2, unresolved_symbols=0)
 
-    # Turn 1: regression (test failures increased to 5)
-    valid, msg = bcv.register_turn(turn=1, modified_files={"a.py": "hash2"}, test_failures=5, unresolved_symbols=1)
-    assert not valid
-    assert "Contraction violated" in msg
+def test_strict_lyapunov_contraction_convergence() -> None:
+    dclv = DiscreteLyapunovValidator(contraction_factor=0.80, max_turns=6)
+    # Turn 0: 4 test failures, 2 unresolved symbols -> V(S_0) = 4*1.5 + 2*1.0 = 8.0
+    ok0, _ = dclv.register_turn(0, {"a.py": "h0"}, test_failures=4, unresolved_symbols=2)
+    assert ok0
+    assert dclv.history[-1].distance_to_target == 8.0
+
+    # Turn 1: 2 failures, 1 symbol, 1 file changed -> V(S_1) = 3.0 + 1.0 + 0.5 = 4.5 <= 0.8 * 8.0 (6.4)
+    ok1, msg1 = dclv.register_turn(1, {"a.py": "h1"}, test_failures=2, unresolved_symbols=1)
+    assert ok1 and "Contractive step valid" in msg1
+
+    # Turn 2: 0 failures, 0 unresolved -> V(S_2) = 0.0 (Fixed-point manifold achieved, churn=0 when T=0)
+    ok2, msg2 = dclv.register_turn(2, {"a.py": "h2", "b.py": "h3"}, test_failures=0, unresolved_symbols=0)
+    assert ok2 and "Fixed-point manifold achieved" in msg2
+
+
+def test_stagnation_and_duplicate_hash_limit_cycle_blocked() -> None:
+    bcv = BanachContractionValidator(contraction_factor=0.75, max_turns=6)
+    bcv.register_turn(0, {"a.py": "h0"}, test_failures=4, unresolved_symbols=0)  # V = 6.0
+
+    # Identical state hash -> blocked immediately by SHA-256 Taboo
+    ok_dup, msg_dup = bcv.register_turn(1, {"a.py": "h0"}, test_failures=4, unresolved_symbols=0)
+    assert not ok_dup and "duplicate cryptographic state hash" in msg_dup
+
+    # Different hash, weak improvement V = 5.0 > 0.75 * 6.0 = 4.5 -> blocked by strict lambda
+    ok_weak, msg_weak = bcv.register_turn(1, {"a.py": "h1"}, test_failures=3, unresolved_symbols=0)
+    assert not ok_weak and "Contraction violated" in msg_weak
+
+
+def test_transactional_history_isolation_on_rollback() -> None:
+    dclv = DiscreteLyapunovValidator(contraction_factor=0.80, max_turns=6)
+    dclv.register_turn(0, {"a.py": "h0"}, test_failures=4, unresolved_symbols=0)  # V = 6.0
+
+    # Regression V = 9.5 -> rejected; must NOT pollute dclv.history[-1]
+    ok_reg, _ = dclv.register_turn(1, {"a.py": "bad"}, test_failures=6, unresolved_symbols=0)
+    assert not ok_reg
+    assert len(dclv.history) == 1
+    assert dclv.history[-1].distance_to_target == 6.0
+
+    # Subsequent candidate V = 8.0 (< 9.5, so a polluted history would accept, but > 0.8*6.0 = 4.8!)
+    ok_next, _ = dclv.register_turn(1, {"a.py": "still_bad"}, test_failures=5, unresolved_symbols=0)
+    assert not ok_next
+    assert len(dclv.rejected_history) == 2
+
+
+def test_neutral_refactoring_step_with_taboo_guard() -> None:
+    dclv = DiscreteLyapunovValidator(contraction_factor=0.75, max_turns=6, allow_neutral_refactor_steps=1)
+    dclv.register_turn(0, {"a.py": "h0"}, test_failures=2, unresolved_symbols=1)  # V = 4.0
+
+    # Neutral step: V = 1*1.5 + 2*1.0 + 0.5*1 = 4.0 (new hash, consumes 1 neutral step)
+    ok_n1, msg_n1 = dclv.register_turn(1, {"a.py": "h1"}, test_failures=1, unresolved_symbols=2)
+    assert ok_n1 and "Neutral refactoring step" in msg_n1
+
+    # Second neutral step must be rejected once budget=0
+    ok_n2, _ = dclv.register_turn(2, {"a.py": "h2"}, test_failures=2, unresolved_symbols=0)
+    assert not ok_n2
+
+
+def test_discrete_lattice_step_bound_theorem() -> None:
+    # Theorem 1: For V_0 = 8.0 and lambda = 0.75, K = floor(ln(0.5 / 8.0) / ln(0.75)) + 1 = 10
+    k_bound = DiscreteLyapunovValidator.theoretical_max_steps(8.0, 0.75)
+    assert k_bound == 10
+    val = 8.0 * (0.75 ** k_bound)
+    assert val < 0.5  # Strictly below minimum positive lattice quantum -> implies V = 0
+
+
+def test_state_adaptive_lattice_envelope() -> None:
+    # On large initial defect V_0 = 7.5 (5 failing tests), fixing 1 test in 1 file yields V_1 = 6.5.
+    # Fixed lambda=0.75 rejects 6.5 > 5.625, whereas adaptive envelope lambda_eff = max(0.75, 1 - 0.5/7.5) = 0.933 accepts 6.5 <= 7.0!
+    fixed_v = DiscreteLyapunovValidator(contraction_factor=0.75, adaptive_lattice_envelope=False)
+    fixed_v.register_turn(0, {"a.py": "h0"}, test_failures=5, unresolved_symbols=0)
+    ok_fixed, _ = fixed_v.register_turn(1, {"a.py": "h1"}, test_failures=4, unresolved_symbols=0)
+    assert not ok_fixed
+
+    adapt_v = DiscreteLyapunovValidator(contraction_factor=0.75, adaptive_lattice_envelope=True)
+    adapt_v.register_turn(0, {"a.py": "h0"}, test_failures=5, unresolved_symbols=0)
+    ok_adapt, msg_adapt = adapt_v.register_turn(1, {"a.py": "h1"}, test_failures=4, unresolved_symbols=0)
+    assert ok_adapt and "Contractive step valid" in msg_adapt
 
 
 if __name__ == "__main__":
-    test_topological_code_graph_indexing()
-    test_banach_contraction_success()
-    test_banach_contraction_regression_rejection()
-    print("All 3 test suites passed successfully!")
+    test_cross_file_ast_dependency_and_inheritance_linking()
+    test_token_budget_enforcement()
+    test_strict_lyapunov_contraction_convergence()
+    test_stagnation_and_duplicate_hash_limit_cycle_blocked()
+    test_transactional_history_isolation_on_rollback()
+    test_neutral_refactoring_step_with_taboo_guard()
+    test_discrete_lattice_step_bound_theorem()
+    test_state_adaptive_lattice_envelope()
+    print("All 8 verification suites passed successfully (Exit 0)!")

@@ -1,0 +1,234 @@
+{
+  "benchmark_version": "2.0.0",
+  "seed": 20261110,
+  "elapsed_seconds": 2.235,
+  "experiment_a_stdlib_ast_slicing": {
+    "total_targets": 45,
+    "packages": [
+      {
+        "package": "email",
+        "ast_nodes": 635,
+        "directed_edges": 2290,
+        "full_package_tokens": 90396,
+        "evaluated_targets": 9
+      },
+      {
+        "package": "urllib",
+        "ast_nodes": 290,
+        "directed_edges": 783,
+        "full_package_tokens": 40339,
+        "evaluated_targets": 9
+      },
+      {
+        "package": "http",
+        "ast_nodes": 262,
+        "directed_edges": 642,
+        "full_package_tokens": 41412,
+        "evaluated_targets": 9
+      },
+      {
+        "package": "logging",
+        "ast_nodes": 284,
+        "directed_edges": 1133,
+        "full_package_tokens": 44531,
+        "evaluated_targets": 9
+      },
+      {
+        "package": "unittest",
+        "ast_nodes": 446,
+        "directed_edges": 1149,
+        "full_package_tokens": 61670,
+        "evaluated_targets": 9
+      }
+    ],
+    "methods": {
+      "full_package": {
+        "dependency_recall_pct": 100.0,
+        "mean_prompt_tokens": 55670,
+        "compression_vs_full_x": 1.0,
+        "kv_cache_26b_a4b_mb": 10298.95
+      },
+      "fixed_chunk_500": {
+        "dependency_recall_pct": 22.2,
+        "mean_prompt_tokens": 6081,
+        "compression_vs_full_x": 9.16,
+        "kv_cache_26b_a4b_mb": 1124.98
+      },
+      "bm25_lexical": {
+        "dependency_recall_pct": 19.0,
+        "mean_prompt_tokens": 3496,
+        "compression_vs_full_x": 15.93,
+        "kv_cache_26b_a4b_mb": 646.76
+      },
+      "pagerank_repomap": {
+        "dependency_recall_pct": 10.4,
+        "mean_prompt_tokens": 3497,
+        "compression_vs_full_x": 15.92,
+        "kv_cache_26b_a4b_mb": 646.94
+      },
+      "tcgs_k0": {
+        "dependency_recall_pct": 0.0,
+        "mean_prompt_tokens": 273,
+        "compression_vs_full_x": 203.69,
+        "kv_cache_26b_a4b_mb": 50.51
+      },
+      "tcgs_k1": {
+        "dependency_recall_pct": 21.4,
+        "mean_prompt_tokens": 2605,
+        "compression_vs_full_x": 21.37,
+        "kv_cache_26b_a4b_mb": 481.93
+      },
+      "tcgs_k2": {
+        "dependency_recall_pct": 56.8,
+        "mean_prompt_tokens": 3312,
+        "compression_vs_full_x": 16.81,
+        "kv_cache_26b_a4b_mb": 612.72
+      },
+      "tcgs_k3": {
+        "dependency_recall_pct": 57.4,
+        "mean_prompt_tokens": 3449,
+        "compression_vs_full_x": 16.14,
+        "kv_cache_26b_a4b_mb": 638.06
+      }
+    }
+  },
+  "experiment_b_trajectory_ablation": {
+    "n_tasks": 250,
+    "methodology_note": "Controlled Monte Carlo multi-turn defect trajectory benchmark seeded deterministically (seed=20261110) parameterized by measured Experiment A AST dependency recall, explicitly reporting both Accepted Trajectory Tokens and Total Billed Tokens (including rejected rollbacks).",
+    "results": [
+      {
+        "configuration": "Gemma 4 E4B (Fixed-Chunk ReAct, No Governor)",
+        "resolve_rate_pct": 8.0,
+        "mean_accepted_turns": 7.6,
+        "mean_accepted_tokens": 49434,
+        "mean_total_billed_tokens": 49434,
+        "cyclic_thrash_rate_pct": 35.2
+      },
+      {
+        "configuration": "Gemma 4 E4B + Wayfinder (TCGS k=2 + Adaptive DCLV)",
+        "resolve_rate_pct": 40.4,
+        "mean_accepted_turns": 1.81,
+        "mean_accepted_tokens": 6747,
+        "mean_total_billed_tokens": 19138,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Gemma 4 12B (BM25 Lexical, No Governor)",
+        "resolve_rate_pct": 8.4,
+        "mean_accepted_turns": 7.68,
+        "mean_accepted_tokens": 30059,
+        "mean_total_billed_tokens": 30059,
+        "cyclic_thrash_rate_pct": 34.0
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (Fixed-Chunk ReAct, No Governor)",
+        "resolve_rate_pct": 13.6,
+        "mean_accepted_turns": 7.48,
+        "mean_accepted_tokens": 48653,
+        "mean_total_billed_tokens": 48653,
+        "cyclic_thrash_rate_pct": 35.2
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (PageRank RepoMap, No Governor)",
+        "resolve_rate_pct": 7.6,
+        "mean_accepted_turns": 7.66,
+        "mean_accepted_tokens": 30004,
+        "mean_total_billed_tokens": 30004,
+        "cyclic_thrash_rate_pct": 40.8
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (TCGS k=2 Only, No Governor)",
+        "resolve_rate_pct": 28.8,
+        "mean_accepted_turns": 6.84,
+        "mean_accepted_tokens": 25512,
+        "mean_total_billed_tokens": 25512,
+        "cyclic_thrash_rate_pct": 10.0
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (Weak Monotonicity lambda=1.0, No Taboo)",
+        "resolve_rate_pct": 67.2,
+        "mean_accepted_turns": 2.99,
+        "mean_accepted_tokens": 11151,
+        "mean_total_billed_tokens": 21168,
+        "cyclic_thrash_rate_pct": 8.0
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (DCLV lambda=0.75 Only, BM25 Context)",
+        "resolve_rate_pct": 33.6,
+        "mean_accepted_turns": 1.32,
+        "mean_accepted_tokens": 5169,
+        "mean_total_billed_tokens": 17042,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Gemma 4 26B A4B (Fixed-Lambda DCLV lambda=0.75 + TCGS k=2)",
+        "resolve_rate_pct": 54.8,
+        "mean_accepted_turns": 1.71,
+        "mean_accepted_tokens": 6374,
+        "mean_total_billed_tokens": 16077,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Wayfinder-Gemma 4 26B A4B (Full: TCGS k=2 + Adaptive DCLV + Taboo)",
+        "resolve_rate_pct": 68.4,
+        "mean_accepted_turns": 2.3,
+        "mean_accepted_tokens": 8599,
+        "mean_total_billed_tokens": 17496,
+        "cyclic_thrash_rate_pct": 0.0
+      }
+    ]
+  },
+  "experiment_c_lambda_sensitivity": [
+    {
+      "configuration": "lambda=0.50",
+      "resolve_rate_pct": 21.2,
+      "mean_accepted_turns": 0.48,
+      "mean_accepted_tokens": 1806,
+      "mean_total_billed_tokens": 11898,
+      "cyclic_thrash_rate_pct": 0.0,
+      "lambda": 0.5,
+      "theoretical_max_steps_v8": 5
+    },
+    {
+      "configuration": "lambda=0.65",
+      "resolve_rate_pct": 42.0,
+      "mean_accepted_turns": 1.22,
+      "mean_accepted_tokens": 4538,
+      "mean_total_billed_tokens": 14435,
+      "cyclic_thrash_rate_pct": 0.0,
+      "lambda": 0.65,
+      "theoretical_max_steps_v8": 7
+    },
+    {
+      "configuration": "lambda=0.75",
+      "resolve_rate_pct": 57.6,
+      "mean_accepted_turns": 1.76,
+      "mean_accepted_tokens": 6553,
+      "mean_total_billed_tokens": 16107,
+      "cyclic_thrash_rate_pct": 0.0,
+      "lambda": 0.75,
+      "theoretical_max_steps_v8": 10
+    },
+    {
+      "configuration": "lambda=0.85",
+      "resolve_rate_pct": 58.4,
+      "mean_accepted_turns": 1.98,
+      "mean_accepted_tokens": 7404,
+      "mean_total_billed_tokens": 17421,
+      "cyclic_thrash_rate_pct": 0.0,
+      "lambda": 0.85,
+      "theoretical_max_steps_v8": 18
+    },
+    {
+      "configuration": "lambda=0.95",
+      "resolve_rate_pct": 68.8,
+      "mean_accepted_turns": 2.24,
+      "mean_accepted_tokens": 8360,
+      "mean_total_billed_tokens": 17824,
+      "cyclic_thrash_rate_pct": 0.0,
+      "lambda": 0.95,
+      "theoretical_max_steps_v8": 55
+    }
+  ],
+  "sha256_digest": "835c2b8d927a1f1473e718f8b4482219cfe13255d6a50c1719e42ef73e38e8bd"
+}
