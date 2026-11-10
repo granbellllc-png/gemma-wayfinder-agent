@@ -4,6 +4,7 @@
 
 - **Author:** Alessandro Massimiliano Gasparini (`alexmaxi`) — *Autonomous Systems & Engineering Intelligence*
 - **Competition:** Google DeepMind — *The Gemma 4 Developer Agent Paper Track*
+- **Official Kaggle Paper Writeup:** [https://www.kaggle.com/competitions/gemma-4-developer-agent-paper/writeups/gemma-4-tcgs-lyapunov-swe-agent](https://www.kaggle.com/competitions/gemma-4-developer-agent-paper/writeups/gemma-4-tcgs-lyapunov-swe-agent)
 - **Open-Source Repository:** [https://github.com/granbellllc-png/gemma-wayfinder-agent](https://github.com/granbellllc-png/gemma-wayfinder-agent)
 - **Executable Kaggle Verification Notebook:** [https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification](https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification)
 - **License:** Apache License 2.0
