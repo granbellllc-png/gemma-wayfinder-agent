@@ -3,7 +3,7 @@
 Official open-source research repository for **Google DeepMind — The Gemma 4 Developer Agent Paper Track** on Kaggle.
 
 - **GitHub Repository:** [https://github.com/granbellllc-png/gemma-wayfinder-agent](https://github.com/granbellllc-png/gemma-wayfinder-agent)
-- **Public Kaggle Verification Notebook:** [https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent](https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent)
+- **Public Kaggle Verification Notebook:** [https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification](https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification)
 - **License:** Apache License 2.0
 
 ## Highlights

@@ -124,7 +124,7 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, digest: st
         Paragraph(
             "<b>Alessandro Massimiliano Gasparini (alexmaxi)</b> &mdash; Google DeepMind: The Gemma 4 Developer Agent Paper Track<br/>"
             "GitHub: <font name='Courier'>https://github.com/granbellllc-png/gemma-wayfinder-agent</font> | "
-            "Kaggle: <font name='Courier'>https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent</font> | Apache 2.0",
+            "Kaggle: <font name='Courier'>https://www.kaggle.com/code/alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification</font> | Apache 2.0",
             s_meta,
         ),
         Paragraph(
@@ -505,7 +505,7 @@ def main() -> None:
     nb_path.write_text(json.dumps(nb, indent=2), encoding="utf-8")
 
     kmeta = {
-        "id": "alexmaxi/gemma-4-tcgs-lyapunov-swe-agent",
+        "id": "alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification",
         "title": "Gemma 4 TCGS & Lyapunov SWE Agent Verification",
         "code_file": "gemma-4-tcgs-lyapunov-swe-agent.ipynb",
         "language": "python",

@@ -1,5 +1,5 @@
 {
-  "id": "alexmaxi/gemma-4-tcgs-lyapunov-swe-agent",
+  "id": "alexmaxi/gemma-4-tcgs-lyapunov-swe-agent-verification",
   "title": "Gemma 4 TCGS & Lyapunov SWE Agent Verification",
   "code_file": "gemma-4-tcgs-lyapunov-swe-agent.ipynb",
   "language": "python",
