@@ -290,19 +290,19 @@ def _load_fonts():
 
 def _build_cover_png(out_path: Path, digest: str) -> None:
     f_title, f_sub, f_box_t, f_body, f_mono, f_big = _load_fonts()
-    img = Image.new("RGB", (1600, 900), (11, 17, 32))
+    img = Image.new("RGB", (1600, 800), (11, 17, 32))
     draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, 1600, 130], fill=(15, 23, 42))
-    draw.rectangle([0, 126, 1600, 132], fill=(59, 130, 246))
+    draw.rectangle([0, 0, 1600, 112], fill=(15, 23, 42))
+    draw.rectangle([0, 108, 1600, 114], fill=(59, 130, 246))
 
     draw.text(
-        (48, 28),
+        (48, 20),
         "Wayfinder v3.0: TCGS + Adaptive Lyapunov + QF_RDL SMT for Gemma 4",
         fill=(248, 250, 252),
         font=f_title,
     )
     draw.text(
-        (48, 78),
+        (48, 66),
         "Google DeepMind — The Gemma 4 Developer Agent Paper Track  |  Open-Source Apache 2.0",
         fill=(148, 163, 184),
         font=f_sub,
@@ -311,9 +311,9 @@ def _build_cover_png(out_path: Path, digest: str) -> None:
     boxes = [
         (
             48,
-            165,
+            134,
             760,
-            305,
+            262,
             (30, 41, 59),
             (56, 189, 248),
             "1. Hop-Skeletonized Topological Code-Graph (TCGS k=2)",
@@ -321,9 +321,9 @@ def _build_cover_png(out_path: Path, digest: str) -> None:
         ),
         (
             48,
-            330,
+            278,
             760,
-            470,
+            406,
             (30, 41, 59),
             (129, 140, 248),
             "2. State-Adaptive Lattice Lyapunov Governor (DCLV)",
@@ -331,9 +331,9 @@ def _build_cover_png(out_path: Path, digest: str) -> None:
         ),
         (
             48,
-            495,
+            422,
             760,
-            635,
+            550,
             (30, 41, 59),
             (52, 211, 153),
             "3. Bellman-Ford DPLL(QF_RDL) Formal SMT Verifier",
@@ -342,24 +342,24 @@ def _build_cover_png(out_path: Path, digest: str) -> None:
     ]
     for x1, y1, x2, y2, bg, border, title, desc in boxes:
         draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=bg, outline=border, width=3)
-        draw.text((x1 + 22, y1 + 16), title, fill=border, font=f_box_t)
+        draw.text((x1 + 22, y1 + 13), title, fill=border, font=f_box_t)
         for idx, line in enumerate(desc.split("\n")):
-            draw.text((x1 + 22, y1 + 54 + idx * 30), line, fill=(226, 232, 240), font=f_body)
+            draw.text((x1 + 22, y1 + 49 + idx * 28), line, fill=(226, 232, 240), font=f_body)
 
     kpis = [
-        (810, 165, 1175, 320, "56.8%", "2-Hop AST Recall", "2.99x BM25 | 16.81x Compress", (56, 189, 248)),
-        (1195, 165, 1552, 320, "68.4%", "26B A4B Resolve", "vs 13.6% ReAct | 2.78x Less Tok", (129, 140, 248)),
-        (810, 340, 1175, 495, "15 / 15", "Live 3-File Bug-Fix", "100% Test Exit 0 | 36 Rollbacks", (52, 211, 153)),
-        (1195, 340, 1552, 495, "100%", "QF_RDL SMT SAT", "0.0% Cyclic Thrashing Guaranteed", (250, 204, 21)),
+        (810, 134, 1175, 276, "56.8%", "2-Hop AST Recall", "2.99x BM25 | 16.81x Compress", (56, 189, 248)),
+        (1195, 134, 1552, 276, "68.4%", "26B A4B Resolve", "vs 13.6% ReAct | 2.78x Less Tok", (129, 140, 248)),
+        (810, 292, 1175, 434, "15 / 15", "Live 3-File Bug-Fix", "100% Test Exit 0 | 36 Rollbacks", (52, 211, 153)),
+        (1195, 292, 1552, 434, "100%", "QF_RDL SMT SAT", "0.0% Cyclic Thrashing Guaranteed", (250, 204, 21)),
     ]
     for x1, y1, x2, y2, big, lbl, sub, col in kpis:
         draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
-        draw.text((x1 + 22, y1 + 18), big, fill=col, font=f_big)
-        draw.text((x1 + 22, y1 + 74), lbl, fill=(241, 245, 249), font=f_box_t)
-        draw.text((x1 + 22, y1 + 110), sub, fill=(148, 163, 184), font=f_body)
+        draw.text((x1 + 22, y1 + 14), big, fill=col, font=f_big)
+        draw.text((x1 + 22, y1 + 66), lbl, fill=(241, 245, 249), font=f_box_t)
+        draw.text((x1 + 22, y1 + 100), sub, fill=(148, 163, 184), font=f_body)
 
-    draw.rounded_rectangle([810, 520, 1552, 845], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
-    draw.text((834, 538), "Verified Multi-Turn & Live Suite (seed=20261110)", fill=(248, 250, 252), font=f_box_t)
+    draw.rounded_rectangle([810, 452, 1552, 768], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
+    draw.text((834, 468), "Verified Multi-Turn & Live Suite (seed=20261110)", fill=(248, 250, 252), font=f_box_t)
     bars = [
         ("26B Chunk ReAct", 13.6, (148, 163, 184)),
         ("26B TCGS Only", 28.8, (56, 189, 248)),
@@ -369,17 +369,17 @@ def _build_cover_png(out_path: Path, digest: str) -> None:
         ("Live 3-File (N=15)", 100.0, (52, 211, 153)),
     ]
     for i, (label, val, col) in enumerate(bars):
-        by = 584 + i * 40
+        by = 510 + i * 40
         draw.text((834, by), label, fill=(203, 213, 225), font=f_body)
         bw = int(val * 3.9)
         draw.rounded_rectangle([1055, by + 3, 1055 + max(8, bw), by + 26], radius=5, fill=col)
         draw.text((1065 + bw, by + 1), f"{val:.1f}%", fill=(248, 250, 252), font=f_mono)
 
-    draw.rounded_rectangle([48, 665, 760, 845], radius=14, fill=(15, 23, 42), outline=(51, 65, 85), width=2)
-    draw.text((70, 686), "Zero-Dependency Reproducibility (11 Suites, <3s, Exit 0):", fill=(56, 189, 248), font=f_box_t)
-    draw.text((70, 728), "$ python3 test_harness.py && python3 benchmark_runner.py", fill=(226, 232, 240), font=f_mono)
-    draw.text((70, 764), "GitHub: granbellllc-png/gemma-wayfinder-agent (Apache 2.0)", fill=(203, 213, 225), font=f_mono)
-    draw.text((70, 798), f"SHA-256 Telemetry: {digest[:36]}...", fill=(148, 163, 184), font=f_mono)
+    draw.rounded_rectangle([48, 568, 760, 768], radius=14, fill=(15, 23, 42), outline=(51, 65, 85), width=2)
+    draw.text((70, 588), "Zero-Dependency Reproducibility (11 Suites, <3s, Exit 0):", fill=(56, 189, 248), font=f_box_t)
+    draw.text((70, 632), "$ python3 test_harness.py && python3 benchmark_runner.py", fill=(226, 232, 240), font=f_mono)
+    draw.text((70, 672), "GitHub: granbellllc-png/gemma-wayfinder-agent (Apache 2.0)", fill=(203, 213, 225), font=f_mono)
+    draw.text((70, 712), f"SHA-256 Telemetry: {digest[:36]}...", fill=(148, 163, 184), font=f_mono)
 
     img.save(str(out_path), format="PNG")
 
