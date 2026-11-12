@@ -1,39 +1,7 @@
 {
-  "benchmark_version": "3.0.0",
+  "benchmark_version": "3.1.0",
   "seed": 20261110,
-  "elapsed_seconds": 2.412,
-  "triz_contradiction_mappings": {
-    "tcgs_31_vs_12": {
-      "improving": "Parameter #31 (Harmful side-effects / Context dilution)",
-      "worsening": "Parameter #12 (Topological call-graph shape)",
-      "principles": [
-        1,
-        35
-      ],
-      "principle_names": [
-        "Principle #01 \u2014 Segmentation (k-hop bounded AST subgraph)",
-        "Principle #35 \u2014 Parameter/Property Transformation (2-hop interface skeletonization)"
-      ],
-      "mechanism": "Hierarchical Hop-Skeletonized TCGS"
-    },
-    "dclv_09_vs_27": {
-      "improving": "Parameter #09 (Speed / Multi-turn iteration throughput)",
-      "worsening": "Parameter #27 (Reliability / Regression prevention)",
-      "principles": [
-        11,
-        35,
-        27,
-        28
-      ],
-      "principle_names": [
-        "Principle #11 \u2014 Cushion in Advance (Transactional rollback state snapshot)",
-        "Principle #35 \u2014 Parameter Transformation (State-Adaptive Lattice Envelope lambda_eff)",
-        "Principle #27 \u2014 Cheap Short-Living Objects (Disposable candidate evaluation)",
-        "Principle #28 \u2014 Mechanics Substitution (Formal QF_RDL difference-logic gate)"
-      ],
-      "mechanism": "State-Adaptive DCLV + QF_RDL SMT Verifier"
-    }
-  },
+  "elapsed_seconds": 3.835,
   "experiment_a_stdlib_ast_slicing": {
     "total_targets": 45,
     "packages": [
@@ -81,16 +49,16 @@
         "kv_cache_26b_a4b_mb": 10298.95
       },
       "fixed_chunk_500": {
-        "dependency_recall_pct": 22.2,
-        "mean_prompt_tokens": 6081,
-        "compression_vs_full_x": 9.16,
-        "kv_cache_26b_a4b_mb": 1124.98
+        "dependency_recall_pct": 22.1,
+        "mean_prompt_tokens": 6098,
+        "compression_vs_full_x": 9.13,
+        "kv_cache_26b_a4b_mb": 1128.13
       },
       "bm25_lexical": {
-        "dependency_recall_pct": 19.0,
-        "mean_prompt_tokens": 3496,
+        "dependency_recall_pct": 18.7,
+        "mean_prompt_tokens": 3494,
         "compression_vs_full_x": 15.93,
-        "kv_cache_26b_a4b_mb": 646.76
+        "kv_cache_26b_a4b_mb": 646.39
       },
       "pagerank_repomap": {
         "dependency_recall_pct": 10.4,
@@ -111,158 +79,290 @@
         "kv_cache_26b_a4b_mb": 481.93
       },
       "tcgs_k2": {
-        "dependency_recall_pct": 56.8,
-        "mean_prompt_tokens": 3312,
-        "compression_vs_full_x": 16.81,
-        "kv_cache_26b_a4b_mb": 612.72
+        "dependency_recall_pct": 54.7,
+        "mean_prompt_tokens": 3335,
+        "compression_vs_full_x": 16.69,
+        "kv_cache_26b_a4b_mb": 616.98
       },
       "tcgs_k3": {
-        "dependency_recall_pct": 57.4,
-        "mean_prompt_tokens": 3449,
-        "compression_vs_full_x": 16.14,
-        "kv_cache_26b_a4b_mb": 638.06
+        "dependency_recall_pct": 55.1,
+        "mean_prompt_tokens": 3454,
+        "compression_vs_full_x": 16.12,
+        "kv_cache_26b_a4b_mb": 638.99
+      }
+    },
+    "paired_statistical_tests": {
+      "tcgs_k2_vs_bm25_lexical": {
+        "n_targets": 45,
+        "mean_gain_pct_pts": 36.0,
+        "bootstrap_95_ci_pct_pts": [
+          30.5,
+          41.9
+        ],
+        "wins": 44,
+        "losses": 0,
+        "ties": 1,
+        "wilcoxon_z": 5.78,
+        "wilcoxon_two_sided_p": 7.616e-09,
+        "exact_sign_test_p": 1.137e-13
+      },
+      "tcgs_k2_vs_pagerank_repomap": {
+        "n_targets": 45,
+        "mean_gain_pct_pts": 44.3,
+        "bootstrap_95_ci_pct_pts": [
+          37.3,
+          51.4
+        ],
+        "wins": 45,
+        "losses": 0,
+        "ties": 0,
+        "wilcoxon_z": 5.84,
+        "wilcoxon_two_sided_p": 5.179e-09,
+        "exact_sign_test_p": 5.684e-14
+      },
+      "tcgs_k2_vs_fixed_chunk_500": {
+        "n_targets": 45,
+        "mean_gain_pct_pts": 32.7,
+        "bootstrap_95_ci_pct_pts": [
+          26.1,
+          39.5
+        ],
+        "wins": 42,
+        "losses": 2,
+        "ties": 1,
+        "wilcoxon_z": 5.67,
+        "wilcoxon_two_sided_p": 1.414e-08,
+        "exact_sign_test_p": 1.127e-10
+      },
+      "tcgs_k2_vs_tcgs_k1": {
+        "n_targets": 45,
+        "mean_gain_pct_pts": 33.4,
+        "bootstrap_95_ci_pct_pts": [
+          27.4,
+          39.6
+        ],
+        "wins": 45,
+        "losses": 0,
+        "ties": 0,
+        "wilcoxon_z": 5.84,
+        "wilcoxon_two_sided_p": 5.179e-09,
+        "exact_sign_test_p": 5.684e-14
       }
     }
   },
-  "experiment_b_trajectory_ablation": {
-    "n_tasks": 250,
-    "methodology_note": "Controlled Monte Carlo multi-turn defect trajectory benchmark seeded deterministically (seed=20261110) parameterized by measured Experiment A AST dependency recall, explicitly reporting both Accepted Trajectory Tokens and Total Billed Tokens (including rejected rollbacks).",
-    "results": [
-      {
-        "configuration": "Gemma 4 E4B (Fixed-Chunk ReAct, No Governor)",
-        "resolve_rate_pct": 8.0,
-        "mean_accepted_turns": 7.6,
-        "mean_accepted_tokens": 49434,
-        "mean_total_billed_tokens": 49434,
-        "cyclic_thrash_rate_pct": 35.2
+  "experiment_b_live_gemma4_gpu_suite": {
+    "suite_self_check": {
+      "repos_verified": 20,
+      "total_unit_tests": 100,
+      "bm25_2hop_causal_chain_recall_pct": 40.0,
+      "tcgs_k2_2hop_causal_chain_recall_pct": 100.0,
+      "bm25_mean_slice_tokens": 406,
+      "tcgs_k2_mean_slice_tokens": 404
+    },
+    "live_gpu_telemetry_summary": {
+      "available": true,
+      "digest_verified": true,
+      "sha256_digest": "acf9de0b44c37be30448068d0d40a89c6e6e3139925acc307de0ae3b1955c407",
+      "hardware_and_runtime": {
+        "gpu_count": 2,
+        "gpu_models": [
+          "Tesla T4",
+          "Tesla T4"
+        ],
+        "torch_version": "2.11.0+cu130",
+        "transformers_version": "5.20.2",
+        "slice_token_budget": 450,
+        "max_llm_calls_per_repo": 6,
+        "max_new_tokens_per_call": 512,
+        "total_wall_clock_seconds": 3366.74
       },
-      {
-        "configuration": "Gemma 4 E4B + Wayfinder (TCGS k=2 + Adaptive DCLV)",
-        "resolve_rate_pct": 40.4,
-        "mean_accepted_turns": 1.81,
-        "mean_accepted_tokens": 6747,
-        "mean_total_billed_tokens": 19138,
-        "cyclic_thrash_rate_pct": 0.0
-      },
-      {
-        "configuration": "Gemma 4 12B (BM25 Lexical, No Governor)",
-        "resolve_rate_pct": 8.4,
-        "mean_accepted_turns": 7.68,
-        "mean_accepted_tokens": 30059,
-        "mean_total_billed_tokens": 30059,
-        "cyclic_thrash_rate_pct": 34.0
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (Fixed-Chunk ReAct, No Governor)",
-        "resolve_rate_pct": 13.6,
-        "mean_accepted_turns": 7.48,
-        "mean_accepted_tokens": 48653,
-        "mean_total_billed_tokens": 48653,
-        "cyclic_thrash_rate_pct": 35.2
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (PageRank RepoMap, No Governor)",
-        "resolve_rate_pct": 7.6,
-        "mean_accepted_turns": 7.66,
-        "mean_accepted_tokens": 30004,
-        "mean_total_billed_tokens": 30004,
-        "cyclic_thrash_rate_pct": 40.8
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (TCGS k=2 Only, No Governor)",
-        "resolve_rate_pct": 28.8,
-        "mean_accepted_turns": 6.84,
-        "mean_accepted_tokens": 25512,
-        "mean_total_billed_tokens": 25512,
-        "cyclic_thrash_rate_pct": 10.0
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (Weak Monotonicity lambda=1.0, No Taboo)",
-        "resolve_rate_pct": 67.2,
-        "mean_accepted_turns": 2.99,
-        "mean_accepted_tokens": 11151,
-        "mean_total_billed_tokens": 21168,
-        "cyclic_thrash_rate_pct": 8.0
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (DCLV lambda=0.75 Only, BM25 Context)",
-        "resolve_rate_pct": 33.6,
-        "mean_accepted_turns": 1.32,
-        "mean_accepted_tokens": 5169,
-        "mean_total_billed_tokens": 17042,
-        "cyclic_thrash_rate_pct": 0.0
-      },
-      {
-        "configuration": "Gemma 4 26B A4B (Fixed-Lambda DCLV lambda=0.75 + TCGS k=2)",
-        "resolve_rate_pct": 54.8,
-        "mean_accepted_turns": 1.71,
-        "mean_accepted_tokens": 6374,
-        "mean_total_billed_tokens": 16077,
-        "cyclic_thrash_rate_pct": 0.0
-      },
-      {
-        "configuration": "Wayfinder-Gemma 4 26B A4B (Full: TCGS k=2 + Adaptive DCLV + Taboo)",
-        "resolve_rate_pct": 68.4,
-        "mean_accepted_turns": 2.3,
-        "mean_accepted_tokens": 8599,
-        "mean_total_billed_tokens": 17496,
-        "cyclic_thrash_rate_pct": 0.0
+      "e2b_configurations": [
+        {
+          "config_id": "bm25_ungoverned",
+          "configuration": "Gemma 4 E2B-it + Okapi BM25 (Ungoverned ReAct)",
+          "model": "Gemma 4 E2B-it",
+          "n_repositories": 20,
+          "resolved_count": 1,
+          "resolve_rate_pct": 5.0,
+          "cyclic_thrash_count": 10,
+          "cyclic_thrash_rate_pct": 50.0,
+          "mean_llm_calls": 6.0,
+          "mean_accepted_turns": 6.0,
+          "mean_accepted_tokens": 5442,
+          "mean_total_billed_tokens": 5442,
+          "total_rollbacks": 0,
+          "accepted_steps_total": 0,
+          "smt_witness_verified_steps": 0,
+          "smt_witness_verified_pct": null,
+          "wall_clock_seconds": 1511.66
+        },
+        {
+          "config_id": "tcgs_ungoverned",
+          "configuration": "Gemma 4 E2B-it + TCGS k=2 (Ungoverned ReAct)",
+          "model": "Gemma 4 E2B-it",
+          "n_repositories": 20,
+          "resolved_count": 4,
+          "resolve_rate_pct": 20.0,
+          "cyclic_thrash_count": 14,
+          "cyclic_thrash_rate_pct": 70.0,
+          "mean_llm_calls": 5.35,
+          "mean_accepted_turns": 5.35,
+          "mean_accepted_tokens": 4777,
+          "mean_total_billed_tokens": 4777,
+          "total_rollbacks": 0,
+          "accepted_steps_total": 0,
+          "smt_witness_verified_steps": 0,
+          "smt_witness_verified_pct": null,
+          "wall_clock_seconds": 1144.01
+        },
+        {
+          "config_id": "tcgs_fixed_dclv",
+          "configuration": "Gemma 4 E2B-it + TCGS k=2 + Fixed DCLV (lambda_0=0.75)",
+          "model": "Gemma 4 E2B-it",
+          "n_repositories": 20,
+          "resolved_count": 3,
+          "resolve_rate_pct": 15.0,
+          "cyclic_thrash_count": 0,
+          "cyclic_thrash_rate_pct": 0.0,
+          "mean_llm_calls": 5.55,
+          "mean_accepted_turns": 0.75,
+          "mean_accepted_tokens": 721,
+          "mean_total_billed_tokens": 5616,
+          "total_rollbacks": 96,
+          "accepted_steps_total": 15,
+          "smt_witness_verified_steps": 15,
+          "smt_witness_verified_pct": 100.0,
+          "wall_clock_seconds": 1197.53
+        },
+        {
+          "config_id": "wayfinder_full",
+          "configuration": "Gemma 4 E2B-it + Wayfinder Full (TCGS k=2 + Adaptive DCLV + QF_RDL)",
+          "model": "Gemma 4 E2B-it",
+          "n_repositories": 20,
+          "resolved_count": 4,
+          "resolve_rate_pct": 20.0,
+          "cyclic_thrash_count": 0,
+          "cyclic_thrash_rate_pct": 0.0,
+          "mean_llm_calls": 5.45,
+          "mean_accepted_turns": 1.5,
+          "mean_accepted_tokens": 1400,
+          "mean_total_billed_tokens": 5381,
+          "total_rollbacks": 79,
+          "accepted_steps_total": 30,
+          "smt_witness_verified_steps": 30,
+          "smt_witness_verified_pct": 100.0,
+          "wall_clock_seconds": 1141.13
+        }
+      ],
+      "e4b_configurations": [
+        {
+          "config_id": "bm25_ungoverned",
+          "configuration": "Gemma 4 E4B-it + Okapi BM25 (Ungoverned ReAct)",
+          "model": "Gemma 4 E4B-it",
+          "n_repositories": 20,
+          "resolved_count": 8,
+          "resolve_rate_pct": 40.0,
+          "cyclic_thrash_count": 8,
+          "cyclic_thrash_rate_pct": 40.0,
+          "mean_llm_calls": 4.9,
+          "mean_accepted_turns": 4.9,
+          "mean_accepted_tokens": 4500,
+          "mean_total_billed_tokens": 4500,
+          "total_rollbacks": 0,
+          "accepted_steps_total": 0,
+          "smt_witness_verified_steps": 0,
+          "smt_witness_verified_pct": null,
+          "wall_clock_seconds": 2333.08
+        },
+        {
+          "config_id": "tcgs_ungoverned",
+          "configuration": "Gemma 4 E4B-it + TCGS k=2 (Ungoverned ReAct)",
+          "model": "Gemma 4 E4B-it",
+          "n_repositories": 20,
+          "resolved_count": 12,
+          "resolve_rate_pct": 60.0,
+          "cyclic_thrash_count": 7,
+          "cyclic_thrash_rate_pct": 35.0,
+          "mean_llm_calls": 3.7,
+          "mean_accepted_turns": 3.7,
+          "mean_accepted_tokens": 3307,
+          "mean_total_billed_tokens": 3307,
+          "total_rollbacks": 0,
+          "accepted_steps_total": 0,
+          "smt_witness_verified_steps": 0,
+          "smt_witness_verified_pct": null,
+          "wall_clock_seconds": 1387.75
+        },
+        {
+          "config_id": "tcgs_fixed_dclv",
+          "configuration": "Gemma 4 E4B-it + TCGS k=2 + Fixed DCLV (lambda_0=0.75)",
+          "model": "Gemma 4 E4B-it",
+          "n_repositories": 20,
+          "resolved_count": 10,
+          "resolve_rate_pct": 50.0,
+          "cyclic_thrash_count": 0,
+          "cyclic_thrash_rate_pct": 0.0,
+          "mean_llm_calls": 4.15,
+          "mean_accepted_turns": 1.4,
+          "mean_accepted_tokens": 1290,
+          "mean_total_billed_tokens": 3966,
+          "total_rollbacks": 55,
+          "accepted_steps_total": 28,
+          "smt_witness_verified_steps": 28,
+          "smt_witness_verified_pct": 100.0,
+          "wall_clock_seconds": 1427.65
+        },
+        {
+          "config_id": "wayfinder_full",
+          "configuration": "Gemma 4 E4B-it + Wayfinder Full (TCGS k=2 + Adaptive DCLV + QF_RDL)",
+          "model": "Gemma 4 E4B-it",
+          "n_repositories": 20,
+          "resolved_count": 12,
+          "resolve_rate_pct": 60.0,
+          "cyclic_thrash_count": 0,
+          "cyclic_thrash_rate_pct": 0.0,
+          "mean_llm_calls": 3.7,
+          "mean_accepted_turns": 2.45,
+          "mean_accepted_tokens": 2207,
+          "mean_total_billed_tokens": 3440,
+          "total_rollbacks": 25,
+          "accepted_steps_total": 49,
+          "smt_witness_verified_steps": 49,
+          "smt_witness_verified_pct": 100.0,
+          "wall_clock_seconds": 1433.73
+        }
+      ],
+      "paired_statistical_tests_n40": {
+        "wayfinder_full_vs_bm25_ungoverned": {
+          "n_paired_evaluations": 40,
+          "wayfinder_only_wins": 10,
+          "baseline_only_wins": 3,
+          "both_resolved": 6,
+          "both_unresolved": 21,
+          "mcnemar_two_sided_exact_p": 0.092285
+        },
+        "wayfinder_full_vs_tcgs_ungoverned": {
+          "n_paired_evaluations": 40,
+          "wayfinder_only_wins": 1,
+          "baseline_only_wins": 1,
+          "both_resolved": 15,
+          "both_unresolved": 23,
+          "mcnemar_two_sided_exact_p": 1.0
+        },
+        "wayfinder_full_vs_tcgs_fixed_dclv": {
+          "n_paired_evaluations": 40,
+          "wayfinder_only_wins": 4,
+          "baseline_only_wins": 1,
+          "both_resolved": 12,
+          "both_unresolved": 23,
+          "mcnemar_two_sided_exact_p": 0.375
+        }
       }
-    ]
-  },
-  "experiment_c_lambda_sensitivity": [
-    {
-      "configuration": "lambda=0.50",
-      "resolve_rate_pct": 21.2,
-      "mean_accepted_turns": 0.48,
-      "mean_accepted_tokens": 1806,
-      "mean_total_billed_tokens": 11898,
-      "cyclic_thrash_rate_pct": 0.0,
-      "lambda": 0.5,
-      "theoretical_max_steps_v8": 5
-    },
-    {
-      "configuration": "lambda=0.65",
-      "resolve_rate_pct": 42.0,
-      "mean_accepted_turns": 1.22,
-      "mean_accepted_tokens": 4538,
-      "mean_total_billed_tokens": 14435,
-      "cyclic_thrash_rate_pct": 0.0,
-      "lambda": 0.65,
-      "theoretical_max_steps_v8": 7
-    },
-    {
-      "configuration": "lambda=0.75",
-      "resolve_rate_pct": 57.6,
-      "mean_accepted_turns": 1.76,
-      "mean_accepted_tokens": 6553,
-      "mean_total_billed_tokens": 16107,
-      "cyclic_thrash_rate_pct": 0.0,
-      "lambda": 0.75,
-      "theoretical_max_steps_v8": 10
-    },
-    {
-      "configuration": "lambda=0.85",
-      "resolve_rate_pct": 58.4,
-      "mean_accepted_turns": 1.98,
-      "mean_accepted_tokens": 7404,
-      "mean_total_billed_tokens": 17421,
-      "cyclic_thrash_rate_pct": 0.0,
-      "lambda": 0.85,
-      "theoretical_max_steps_v8": 18
-    },
-    {
-      "configuration": "lambda=0.95",
-      "resolve_rate_pct": 68.8,
-      "mean_accepted_turns": 2.24,
-      "mean_accepted_tokens": 8360,
-      "mean_total_billed_tokens": 17824,
-      "cyclic_thrash_rate_pct": 0.0,
-      "lambda": 0.95,
-      "theoretical_max_steps_v8": 55
     }
-  ],
-  "experiment_d_live_multifile_bugfix": {
+  },
+  "experiment_c_deterministic_governor_stress": {
+    "is_scripted_adversarial_patch_stream": true,
+    "methodology_note": "Deterministic governor & QF_RDL verification stress suite using scripted adversarial patch streams (regression -> baseline revisit -> partial fix -> duplicate hash -> complete repair) across 15 executable 3-file repositories (60 unit tests).",
     "total_live_repositories": 15,
     "defect_families_count": 5,
     "tcgs_k2_cross_file_recall_pct": 100.0,
@@ -277,6 +377,8 @@
       "resolved_count": 15,
       "cyclic_thrash_rate_pct": 0.0,
       "rejected_bad_proposals_rolled_back": 36,
+      "accepted_steps_count": 30,
+      "independently_verified_qf_rdl_witnesses": 30,
       "accepted_steps_qf_rdl_sat_pct": 100.0,
       "total_candidate_evaluations": 66
     },
@@ -308,5 +410,144 @@
       }
     }
   },
-  "sha256_digest": "99c1504723884779c2e347cf7fc6bb9ab4be0fe0f96bfe72b90760b90c73462f"
+  "appendix_synthetic_markov_sensitivity_simulation": {
+    "is_synthetic_simulation": true,
+    "n_tasks": 250,
+    "methodology_note": "Explicitly labeled synthetic parametric Markov-chain horizon & contraction-factor sensitivity simulation (seed=20261110, N=250) parameterized by Experiment A AST recall; NOT live LLM inference.",
+    "ablation_rows": [
+      {
+        "configuration": "Synthetic Sim (cap=0.34, Fixed-Chunk, No Governor)",
+        "resolve_rate_pct": 8.0,
+        "mean_accepted_turns": 7.6,
+        "mean_accepted_tokens": 49563,
+        "mean_total_billed_tokens": 49563,
+        "cyclic_thrash_rate_pct": 35.2
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.34 + TCGS k=2 + Adaptive DCLV)",
+        "resolve_rate_pct": 39.6,
+        "mean_accepted_turns": 1.76,
+        "mean_accepted_tokens": 6624,
+        "mean_total_billed_tokens": 19181,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.44, BM25 Lexical, No Governor)",
+        "resolve_rate_pct": 8.8,
+        "mean_accepted_turns": 7.65,
+        "mean_accepted_tokens": 29950,
+        "mean_total_billed_tokens": 29950,
+        "cyclic_thrash_rate_pct": 34.4
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, Fixed-Chunk, No Governor)",
+        "resolve_rate_pct": 13.2,
+        "mean_accepted_turns": 7.52,
+        "mean_accepted_tokens": 49015,
+        "mean_total_billed_tokens": 49015,
+        "cyclic_thrash_rate_pct": 35.6
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, PageRank RepoMap, No Governor)",
+        "resolve_rate_pct": 7.6,
+        "mean_accepted_turns": 7.66,
+        "mean_accepted_tokens": 30004,
+        "mean_total_billed_tokens": 30004,
+        "cyclic_thrash_rate_pct": 40.8
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, TCGS k=2 Only, No Governor)",
+        "resolve_rate_pct": 26.8,
+        "mean_accepted_turns": 6.88,
+        "mean_accepted_tokens": 25849,
+        "mean_total_billed_tokens": 25849,
+        "cyclic_thrash_rate_pct": 10.0
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, Weak Monotonic lambda=1.0, No Taboo)",
+        "resolve_rate_pct": 63.6,
+        "mean_accepted_turns": 2.94,
+        "mean_accepted_tokens": 11040,
+        "mean_total_billed_tokens": 21419,
+        "cyclic_thrash_rate_pct": 10.4
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, Fixed DCLV lambda_0=0.75, BM25)",
+        "resolve_rate_pct": 33.6,
+        "mean_accepted_turns": 1.32,
+        "mean_accepted_tokens": 5166,
+        "mean_total_billed_tokens": 17081,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, Fixed DCLV lambda_0=0.75 + TCGS k=2)",
+        "resolve_rate_pct": 53.6,
+        "mean_accepted_turns": 1.68,
+        "mean_accepted_tokens": 6308,
+        "mean_total_billed_tokens": 16162,
+        "cyclic_thrash_rate_pct": 0.0
+      },
+      {
+        "configuration": "Synthetic Sim (cap=0.52, Full: TCGS k=2 + Adaptive DCLV + Taboo)",
+        "resolve_rate_pct": 66.8,
+        "mean_accepted_turns": 2.24,
+        "mean_accepted_tokens": 8411,
+        "mean_total_billed_tokens": 17799,
+        "cyclic_thrash_rate_pct": 0.0
+      }
+    ],
+    "lambda_sensitivity_sweep": [
+      {
+        "configuration": "Synthetic Sim lambda_0=0.50",
+        "resolve_rate_pct": 21.2,
+        "mean_accepted_turns": 0.52,
+        "mean_accepted_tokens": 1938,
+        "mean_total_billed_tokens": 12091,
+        "cyclic_thrash_rate_pct": 0.0,
+        "lambda": 0.5,
+        "theoretical_max_steps_v8": 5
+      },
+      {
+        "configuration": "Synthetic Sim lambda_0=0.65",
+        "resolve_rate_pct": 38.8,
+        "mean_accepted_turns": 1.14,
+        "mean_accepted_tokens": 4296,
+        "mean_total_billed_tokens": 14524,
+        "cyclic_thrash_rate_pct": 0.0,
+        "lambda": 0.65,
+        "theoretical_max_steps_v8": 7
+      },
+      {
+        "configuration": "Synthetic Sim lambda_0=0.75",
+        "resolve_rate_pct": 58.4,
+        "mean_accepted_turns": 1.83,
+        "mean_accepted_tokens": 6879,
+        "mean_total_billed_tokens": 16582,
+        "cyclic_thrash_rate_pct": 0.0,
+        "lambda": 0.75,
+        "theoretical_max_steps_v8": 10
+      },
+      {
+        "configuration": "Synthetic Sim lambda_0=0.85",
+        "resolve_rate_pct": 60.0,
+        "mean_accepted_turns": 1.98,
+        "mean_accepted_tokens": 7450,
+        "mean_total_billed_tokens": 17438,
+        "cyclic_thrash_rate_pct": 0.0,
+        "lambda": 0.85,
+        "theoretical_max_steps_v8": 18
+      },
+      {
+        "configuration": "Synthetic Sim lambda_0=0.95",
+        "resolve_rate_pct": 66.0,
+        "mean_accepted_turns": 2.17,
+        "mean_accepted_tokens": 8141,
+        "mean_total_billed_tokens": 17739,
+        "cyclic_thrash_rate_pct": 0.0,
+        "lambda": 0.95,
+        "theoretical_max_steps_v8": 55
+      }
+    ]
+  },
+  "sha256_digest": "47032dd3e673b4dd26aaefcd0b581692fc9b2b17d93890d4aa48c653dbaf8f0d"
 }

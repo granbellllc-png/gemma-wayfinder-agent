@@ -1,6 +1,6 @@
 """
 Topological Code-Graph Slicing (TCGS), Discrete Contractive Lyapunov Verification (DCLV),
-and Quantifier-Free Real Difference Logic (QF_RDL) Formal SMT Verification (v3.0)
+and Quantifier-Free Real Difference Logic (QF_RDL) Formal SMT Verification (v3.1)
 Target Architecture: On-Device Google Gemma 4 SWE Agents (E2B, E4B, 12B, 26B A4B MoE, 31B)
 License: Apache License 2.0
 """
@@ -14,13 +14,13 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 def estimate_tokens(text: str) -> int:
-    """Deterministic subword token estimator (~3.8 chars/token for code)."""
+    """Deterministic subword token estimator (~3.8 chars/token for Python source)."""
     if not text:
         return 0
     return max(1, math.ceil(len(text) / 3.8))
@@ -46,8 +46,8 @@ class DifferenceLogicSMTVerifier:
         bigwedge_k (x_{i_k} - x_{j_k} <= c_k)
     by constructing a weighted constraint graph G_c and searching for negative-weight cycles.
     - If no negative cycle exists, returns status='SAT' with an exact witness assignment
-      pi: Vars -> R proved to satisfy pi(x) - pi(y) <= c for every constraint.
-    - If a negative cycle exists, extracts the minimal cyclic UNSAT core.
+      pi: Vars -> R independently verified against every inequality pi(x) - pi(y) <= c.
+    - If a negative cycle exists, extracts a minimal cyclic UNSAT core.
     """
 
     EPSILON: float = 1e-9
@@ -62,6 +62,17 @@ class DifferenceLogicSMTVerifier:
 
     def clear(self) -> None:
         self.constraints.clear()
+
+    def verify_witness(self, witness: Dict[str, float], tol: float = 1e-6) -> bool:
+        """Independently checks that witness pi satisfies pi(x) - pi(y) <= bound for all constraints."""
+        for c in self.constraints:
+            vx = 0.0 if c.x_var == "__zero__" else float(witness.get(c.x_var, math.nan))
+            vy = 0.0 if c.y_var == "__zero__" else float(witness.get(c.y_var, math.nan))
+            if math.isnan(vx) or math.isnan(vy):
+                return False
+            if (vx - vy) > c.bound + tol:
+                return False
+        return True
 
     def check_sat(self) -> Dict[str, Any]:
         variables: Set[str] = {"__zero__"}
@@ -78,7 +89,7 @@ class DifferenceLogicSMTVerifier:
         last_relaxed_var: Optional[str] = None
 
         # Bellman-Ford relaxation over n iterations
-        for iteration in range(n):
+        for _ in range(n):
             last_relaxed_var = None
             for c in self.constraints:
                 # x - y <= bound  <=>  dist[x] <= dist[y] + bound (edge y -> x with weight bound)
@@ -112,6 +123,7 @@ class DifferenceLogicSMTVerifier:
             return {
                 "status": "UNSAT",
                 "verified": False,
+                "witness_independently_verified": False,
                 "constraints_checked": len(self.constraints),
                 "unsat_core": list(reversed(cycle_constraints)),
                 "witness": {},
@@ -124,55 +136,15 @@ class DifferenceLogicSMTVerifier:
             for v in ordered_vars
             if v != "__zero__"
         }
+        witness_ok = self.verify_witness(witness)
         return {
-            "status": "SAT",
-            "verified": True,
+            "status": "SAT" if witness_ok else "UNSAT",
+            "verified": witness_ok,
+            "witness_independently_verified": witness_ok,
             "constraints_checked": len(self.constraints),
-            "unsat_core": [],
-            "witness": witness,
+            "unsat_core": [] if witness_ok else ["witness_verification_failed"],
+            "witness": witness if witness_ok else {},
         }
-
-
-class TRIZContradictionMatrixRouter:
-    """
-    Maps on-device SWE agent bottlenecks to Altshuller's 39x39 Contradiction Matrix
-    and physical/operational separation principles:
-      - Contradiction I: Improving #31 (Self-generated harmful side-effects / attention dilution)
-        without worsening #12 (Topological shape of call graph) -> Principles #01 (Segmentation)
-        & #35 (Parameter/Representation Change) => Hierarchical Hop-Skeletonized TCGS.
-      - Contradiction II: Improving #09 (Speed / multi-turn repair throughput) without worsening
-        #27 (Reliability / zero regressions) -> Principles #11 (Cushion in Advance), #27 (Cheap
-        Short-Living Ephemeral Objects), & #35 (State-Adaptive Contraction Envelope) => DCLV + QF_RDL.
-    """
-
-    MATRIX_MAPPINGS: Dict[Tuple[int, int], Dict[str, Any]] = {
-        (31, 12): {
-            "improving": "Parameter #31 (Harmful side-effects / Context dilution)",
-            "worsening": "Parameter #12 (Topological call-graph shape)",
-            "principles": [1, 35],
-            "principle_names": [
-                "Principle #01 — Segmentation (k-hop bounded AST subgraph)",
-                "Principle #35 — Parameter/Property Transformation (2-hop interface skeletonization)",
-            ],
-            "mechanism": "Hierarchical Hop-Skeletonized TCGS",
-        },
-        (9, 27): {
-            "improving": "Parameter #09 (Speed / Multi-turn iteration throughput)",
-            "worsening": "Parameter #27 (Reliability / Regression prevention)",
-            "principles": [11, 35, 27, 28],
-            "principle_names": [
-                "Principle #11 — Cushion in Advance (Transactional rollback state snapshot)",
-                "Principle #35 — Parameter Transformation (State-Adaptive Lattice Envelope lambda_eff)",
-                "Principle #27 — Cheap Short-Living Objects (Disposable candidate evaluation)",
-                "Principle #28 — Mechanics Substitution (Formal QF_RDL difference-logic gate)",
-            ],
-            "mechanism": "State-Adaptive DCLV + QF_RDL SMT Verifier",
-        },
-    }
-
-    @classmethod
-    def lookup(cls, improve_param: int, worsen_param: int) -> Dict[str, Any]:
-        return dict(cls.MATRIX_MAPPINGS.get((improve_param, worsen_param), {}))
 
 
 @dataclass
@@ -187,6 +159,20 @@ class CodeNode:
     signature: str = ""
     docstring: str = ""
     source_snippet: str = ""
+    method_signatures: List[str] = field(default_factory=list)
+
+    @property
+    def skeleton_text(self) -> str:
+        lines: List[str] = [f"{self.signature}:"]
+        if self.docstring:
+            lines.append(f'    """{self.docstring}"""')
+        if self.method_signatures:
+            lines.extend(self.method_signatures)
+        elif not self.docstring:
+            return f"{self.signature}: ..."
+        else:
+            lines.append("    ...")
+        return "\n".join(lines)
 
     @property
     def token_estimate(self) -> int:
@@ -268,7 +254,7 @@ class TopologicalCodeGraph:
                     lineno=node.lineno,
                     end_lineno=end_ln,
                     signature=f"class {node.name}{base_sig}",
-                    docstring=(ast.get_docstring(node) or "")[:240],
+                    docstring=(ast.get_docstring(node) or "")[:360],
                     source_snippet=snippet,
                 )
                 self.nodes[cls_id] = cnode
@@ -278,7 +264,22 @@ class TopologicalCodeGraph:
                     if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         method_id = self._register_callable(rel_path, lines, item, prefix=f"{node.name}.")
                         cnode.dependencies.add(method_id)
-                        self.nodes[method_id].callers.add(cls_id)
+                        mnode = self.nodes[method_id]
+                        mnode.callers.add(cls_id)
+                        dec_lines: List[str] = []
+                        for dec in getattr(item, "decorator_list", []):
+                            dname = dec.id if isinstance(dec, ast.Name) else (dec.attr if isinstance(dec, ast.Attribute) else "")
+                            if dname in ("staticmethod", "classmethod", "property"):
+                                dec_lines.append(f"    @{dname}")
+                        clean_msig = (
+                            mnode.signature.replace(f"def {node.name}.", "def ", 1)
+                            .replace(f"async def {node.name}.", "async def ", 1)
+                        )
+                        if mnode.docstring:
+                            mskel = "\n".join(dec_lines + [f"    {clean_msig}:", f'        """{mnode.docstring}"""', "        ..."])
+                        else:
+                            mskel = "\n".join(dec_lines + [f"    {clean_msig}: ..."])
+                        cnode.method_signatures.append(mskel)
 
     def _register_callable(
         self,
@@ -294,6 +295,12 @@ class TopologicalCodeGraph:
         kwonly = [a.arg for a in node.args.kwonlyargs]
         all_args = args + ([f"*, {', '.join(kwonly)}"] if kwonly else [])
         async_kw = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
+        ret_ann = ""
+        if getattr(node, "returns", None) is not None and hasattr(ast, "unparse"):
+            try:
+                ret_ann = f" -> {ast.unparse(node.returns)}"
+            except Exception:
+                ret_ann = ""
         snippet = "\n".join(lines[node.lineno - 1 : min(end_ln, node.lineno + 45)])
         cnode = CodeNode(
             name=node.name,
@@ -301,8 +308,8 @@ class TopologicalCodeGraph:
             file_path=rel_path,
             lineno=node.lineno,
             end_lineno=end_ln,
-            signature=f"{async_kw}def {qual_name}({', '.join(all_args)})",
-            docstring=(ast.get_docstring(node) or "")[:240],
+            signature=f"{async_kw}def {qual_name}({', '.join(all_args)}){ret_ann}",
+            docstring=(ast.get_docstring(node) or "")[:360],
             source_snippet=snippet,
         )
         self.nodes[node_id] = cnode
@@ -412,28 +419,27 @@ class TopologicalCodeGraph:
                 self.nodes[src_id].dependencies.add(dst_id)
                 self.nodes[dst_id].callers.add(src_id)
 
-    def extract_topological_slice(
+    def extract_topological_slice_with_hops(
         self,
         target_symbol: str,
         depth: int = 2,
         token_budget: int = 3500,
         skeletonize_distant_hops: bool = True,
-    ) -> Dict[str, CodeNode]:
-        """
-        Extracts a bounded k-hop subgraph G_k = (V_k, E_k) centered around target_symbol,
-        pruning high-degree utility hubs and respecting the active KV-cache token_budget.
-        For hop >= 2 when skeletonize_distant_hops=True, emits typed interface skeletons
-        (signature + docstring) to maximize transitive structural recall per token.
-        """
+    ) -> Tuple[Dict[str, CodeNode], Dict[str, int]]:
         if target_symbol in self.nodes:
             matched = [target_symbol]
         else:
-            exact = [nid for nid in self.nodes if nid.endswith(f"::{target_symbol}") or self.nodes[nid].name == target_symbol]
+            exact = [
+                nid
+                for nid in self.nodes
+                if nid.endswith(f"::{target_symbol}") or self.nodes[nid].name == target_symbol
+            ]
             matched = exact if exact else [nid for nid in self.nodes if target_symbol in nid]
         if not matched:
-            return {}
+            return {}, {}
 
         selected: Dict[str, CodeNode] = {}
+        hop_map: Dict[str, int] = {}
         used_tokens = 0
         frontier: List[str] = sorted(matched)
 
@@ -451,6 +457,7 @@ class TopologicalCodeGraph:
                 if selected and (used_tokens + node_tokens > token_budget):
                     continue
                 selected[nid] = node
+                hop_map[nid] = hop
                 used_tokens += node_tokens
 
                 if hop < depth:
@@ -470,7 +477,80 @@ class TopologicalCodeGraph:
             if not frontier:
                 break
 
+        return selected, hop_map
+
+    def extract_topological_slice(
+        self,
+        target_symbol: str,
+        depth: int = 2,
+        token_budget: int = 3500,
+        skeletonize_distant_hops: bool = True,
+    ) -> Dict[str, CodeNode]:
+        """
+        Extracts a bounded k-hop subgraph G_k = (V_k, E_k) centered around target_symbol,
+        pruning high-degree utility hubs and respecting the active KV-cache token_budget.
+        For hop >= 2 when skeletonize_distant_hops=True, emits typed interface skeletons
+        (signature + docstring) to maximize transitive structural recall per token.
+        """
+        selected, _ = self.extract_topological_slice_with_hops(
+            target_symbol=target_symbol,
+            depth=depth,
+            token_budget=token_budget,
+            skeletonize_distant_hops=skeletonize_distant_hops,
+        )
         return selected
+
+    def render_slice_context(
+        self,
+        target_symbol: str,
+        depth: int = 2,
+        token_budget: int = 3500,
+        skeletonize_distant_hops: bool = True,
+    ) -> Tuple[str, Dict[str, CodeNode]]:
+        """
+        Renders a structured prompt context from the k-hop topological slice:
+        - Files with any hop <= 1 node include full file source (if within budget) or full AST bodies.
+        - Files with only hop >= 2 nodes include typed interface skeletons.
+        """
+        selected, hop_map = self.extract_topological_slice_with_hops(
+            target_symbol=target_symbol,
+            depth=depth,
+            token_budget=token_budget,
+            skeletonize_distant_hops=skeletonize_distant_hops,
+        )
+        if not selected:
+            return "", {}
+
+        files_min_hop: Dict[str, int] = {}
+        files_nodes: Dict[str, List[CodeNode]] = {}
+        for nid, node in selected.items():
+            h = hop_map[nid]
+            fp = node.file_path
+            files_min_hop[fp] = min(h, files_min_hop.get(fp, h))
+            files_nodes.setdefault(fp, []).append(node)
+
+        blocks: List[str] = []
+        for fp in sorted(files_min_hop.keys(), key=lambda p: (files_min_hop[p], p)):
+            min_h = files_min_hop[fp]
+            if min_h <= 1 or not skeletonize_distant_hops:
+                full_text = (self.root_dir / fp).read_text(encoding="utf-8", errors="replace").strip()
+                blocks.append(f"# === FILE: {fp} (Hop {min_h} - Editable Full Source) ===\n{full_text}")
+            else:
+                cls_names_in_file = {n.name for n in files_nodes[fp] if n.kind == "class"}
+                skel_items: List[str] = []
+                for n in sorted(files_nodes[fp], key=lambda x: x.lineno):
+                    if n.kind == "method" and any(
+                        n.signature.startswith(f"def {cn}.") or n.signature.startswith(f"async def {cn}.")
+                        for cn in cls_names_in_file
+                    ):
+                        continue
+                    skel_items.append(n.skeleton_text)
+                skels = "\n\n".join(skel_items)
+                blocks.append(
+                    f"# === INTERFACE SUMMARY: {fp} (Hop {min_h} - Already Implemented Dependency; Call Directly, Do NOT Edit) ===\n{skels}"
+                )
+
+        return "\n\n".join(blocks), selected
 
 
 @dataclass
@@ -480,6 +560,7 @@ class AgentEditState:
     test_failures: int
     unresolved_symbols: int
     distance_to_target: float
+    prompt_tokens: int = 0
     state_hash: str = ""
     smt_verified: bool = True
 
@@ -490,7 +571,7 @@ class DiscreteLyapunovValidator:
         V(S_t) = alpha * T_t + beta * U_t + gamma * I(T_t > 0) * |F_t Delta F_0|
     coupled with formal Quantifier-Free Real Difference Logic (DPLL(QF_RDL)) verification.
     Guarantees finite-step termination to the zero-defect manifold S* = {S | V(S) = 0}
-    in at most K = floor(ln(0.5 / V(S_0)) / ln(lambda)) + 1 accepted steps (or 2*V_0 + B_neutral
+    in at most K = floor(ln(0.5 / V(S_0)) / ln(lambda_0)) + 1 accepted steps (or 2*V_0 + B_neutral
     under the State-Adaptive Lattice Envelope), with cryptographic state-hash Taboo filtering
     that blocks 100% of cyclic revisits.
     """
@@ -502,12 +583,13 @@ class DiscreteLyapunovValidator:
 
     def __init__(
         self,
-        contraction_factor: float = 0.80,
+        contraction_factor: float = 0.75,
         max_turns: int = 6,
         allow_neutral_refactor_steps: int = 0,
         baseline_files: Optional[Dict[str, str]] = None,
         adaptive_lattice_envelope: bool = False,
         max_blast_radius_files: int = 12,
+        max_prompt_tokens: int = 3500,
     ):
         if not (0.0 < contraction_factor < 1.0):
             raise ValueError("contraction_factor lambda must satisfy 0 < lambda < 1")
@@ -518,6 +600,7 @@ class DiscreteLyapunovValidator:
         self.baseline_files: Dict[str, str] = dict(baseline_files or {})
         self.adaptive_lattice_envelope = adaptive_lattice_envelope
         self.max_blast_radius_files = max_blast_radius_files
+        self.max_prompt_tokens = max_prompt_tokens
         self.history: List[AgentEditState] = []
         self.rejected_history: List[AgentEditState] = []
         self.seen_hashes: Set[str] = set()
@@ -568,18 +651,18 @@ class DiscreteLyapunovValidator:
         v_cand: float,
         strict_bound: float,
         delta_files: int,
+        prompt_tokens: int,
         is_neutral_allowed: bool,
     ) -> Dict[str, Any]:
         """
         Formally checks transition admissibility in QF_RDL difference logic:
-          1. v_prev == v_prev (pinned to __zero__)
-          2. v_cand == v_cand (pinned to __zero__)
-          3. -v_cand <= 0  (non-negativity on lattice (1/2) N_0)
-          4. v_cand - v_prev <= (0 if neutral else strict_bound - v_prev)
-          5. blast_radius - __zero__ <= max_blast_radius_files
+          1. V(cand) - V(prev) <= Delta_allowed(prev)   [Lyapunov contraction envelope]
+          2. 0 - V(cand) <= 0                           [Lattice non-negativity]
+          3. |F_cand Delta F_0| - 0 <= B_files          [Syntactic blast-radius ceiling]
+          4. tokens(cand) - 0 <= B_token                [Active KV-cache prompt ceiling]
         """
         smt = DifferenceLogicSMTVerifier()
-        # Pin observed values relative to reference __zero__
+        # Pin observed scalars relative to reference __zero__ = 0.0
         smt.add_constraint("v_prev", "__zero__", v_prev, "v_prev_upper")
         smt.add_constraint("__zero__", "v_prev", -v_prev, "v_prev_lower")
         smt.add_constraint("v_cand", "__zero__", v_cand, "v_cand_upper")
@@ -597,6 +680,15 @@ class DiscreteLyapunovValidator:
             float(self.max_blast_radius_files),
             "max_blast_radius_bound",
         )
+
+        smt.add_constraint("prompt_tokens", "__zero__", float(prompt_tokens), "tokens_obs_upper")
+        smt.add_constraint("__zero__", "prompt_tokens", -float(prompt_tokens), "tokens_obs_lower")
+        smt.add_constraint(
+            "prompt_tokens",
+            "__zero__",
+            float(self.max_prompt_tokens),
+            "max_prompt_tokens_bound",
+        )
         return smt.check_sat()
 
     def register_turn(
@@ -605,6 +697,7 @@ class DiscreteLyapunovValidator:
         modified_files: Dict[str, str],
         test_failures: int,
         unresolved_symbols: int,
+        prompt_tokens: int = 0,
     ) -> Tuple[bool, str]:
         if not self.history and not self.baseline_files:
             self.baseline_files = dict(modified_files)
@@ -619,6 +712,7 @@ class DiscreteLyapunovValidator:
             test_failures=test_failures,
             unresolved_symbols=unresolved_symbols,
             distance_to_target=dist,
+            prompt_tokens=prompt_tokens,
             state_hash=sig,
         )
 
@@ -635,13 +729,19 @@ class DiscreteLyapunovValidator:
                 v_cand=0.0,
                 strict_bound=0.0,
                 delta_files=delta_files,
+                prompt_tokens=prompt_tokens,
                 is_neutral_allowed=False,
             )
-            state.smt_verified = bool(smt_res["verified"])
             self.smt_proofs.append(smt_res)
+            if not smt_res["verified"]:
+                state.smt_verified = False
+                self.rejected_history.append(state)
+                core = ", ".join(smt_res.get("unsat_core", []))
+                return False, f"QF_RDL invariant violated at candidate zero state ({core})."
+            state.smt_verified = True
             self.history.append(state)
             self.seen_hashes.add(sig)
-            return True, "Fixed-point manifold achieved: zero test failures and resolved symbols"
+            return True, "Fixed-point manifold achieved: zero test failures and resolved symbols (QF_RDL SAT)"
 
         if sig in self.seen_hashes:
             state.smt_verified = False
@@ -664,6 +764,7 @@ class DiscreteLyapunovValidator:
             v_cand=dist,
             strict_bound=strict_bound,
             delta_files=delta_files,
+            prompt_tokens=prompt_tokens,
             is_neutral_allowed=is_neutral_candidate,
         )
         self.smt_proofs.append(smt_res)
@@ -688,9 +789,10 @@ class DiscreteLyapunovValidator:
 
         state.smt_verified = False
         self.rejected_history.append(state)
+        core = ", ".join(smt_res.get("unsat_core", []))
         return (
             False,
-            f"Contraction violated: V={dist:.2f} > lambda*prev={strict_bound:.2f}. Reverting to last valid state.",
+            f"Contraction violated: V={dist:.2f} > bound={strict_bound:.2f} (UNSAT core: {core}). Reverting state.",
         )
 
 

@@ -5,15 +5,14 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{geometry}
-\geometry{a4paper, margin=0.75in}
+\geometry{a4paper, margin=0.72in}
 
 \newtheorem{theorem}{Theorem}
 
-\title{\textbf{Topological Code-Graph Slicing and Discrete Contractive Lyapunov Verification for On-Device Gemma 4 SWE Agents}\\[0.4em]
-\large Eliminating KV-Cache Exhaustion and Multi-Turn Limit Cycles on Single-Accelerator Hardware}
+\title{\textbf{Topological Code-Graph Slicing and Contractive Lyapunov Verification for On-Device Gemma 4 SWE Agents}\\[0.35em]
+\large Token-Budgeted AST Graph Textualization and Inference-Time State-Space Backtracking}
 
 \author{\textbf{Alessandro Massimiliano Gasparini} (\texttt{alexmaxi})\\
-Autonomous Systems \& Engineering Intelligence\\
 \texttt{https://github.com/granbellllc-png/gemma-wayfinder-agent}}
 \date{November 2026}
 
@@ -21,86 +20,82 @@ Autonomous Systems \& Engineering Intelligence\\
 \maketitle
 
 \begin{abstract}
-Google DeepMind's open-weight \textbf{Gemma 4} model family---spanning edge dense tiers (\textbf{E2B, E4B}; 128K context) and workstation tiers (\textbf{12B, 26B A4B MoE} with $\sim$25.2B total / $\sim$3.8B active parameters, and \textbf{31B Dense}; 256K context)---enables private, single-accelerator software engineering (SWE) agents. However, on 16~GB Unified Memory workstations where 4-bit \texttt{Gemma 4 26B A4B} weights occupy $\sim$14.2~GB, agents encounter (1) \emph{KV-cache exhaustion and attention dilution} under $<1.8$~GB residual RAM, and (2) \emph{multi-turn limit-cycle thrashing}. We introduce \textbf{Hierarchical Hop-Skeletonized Topological Code-Graph Slicing (TCGS)} and \textbf{Discrete Contractive Lyapunov Verification (DCLV)}. Across 45 cross-module targets in 5 Python standard-library packages (1,917 AST nodes, 5,997 directed edges), TCGS ($k=2$) achieves \textbf{56.8\%} 2-hop dependency recall ($2.99\times$ BM25, $5.46\times$ PageRank RepoMap) at \textbf{16.81$\times$} compression (3,312 vs.\ 55,670 tokens; 612.7~MB vs.\ 10.30~GB KV-cache). On a reproducible 250-task stochastic repair benchmark (\texttt{seed=20261110}), pairing TCGS with State-Adaptive Lattice DCLV elevates resolve rate from \textbf{13.6\% to 68.4\%}, reduces total billed tokens (including rejected rollbacks) by \textbf{2.78$\times$}, and guarantees \textbf{0.0\%} cyclic thrashing.
+Google DeepMind's open-weight Gemma 4 models---spanning edge dense tiers (E2B, E4B at 128K context) and workstation tiers (12B, 26B A4B MoE with $\sim$3.8B active / 25.2B total parameters, and 31B Dense at 256K context) \cite{gemma4}---enable private single-accelerator software engineering (SWE) agents \cite{jimenez2024}. Yet on consumer workstations, agents confront (1) graph-textualization loss under tight KV-cache budgets \cite{repocoder,kgllmbench} and (2) multi-turn limit-cycle thrashing without structured state-space backtracking \cite{yao2023,tot2024}. We study both layers orthogonally in Wayfinder v3.1, combining Hop-Skeletonized Topological Code-Graph Slicing (TCGS), State-Adaptive Discrete Contractive Lyapunov Verification (DCLV) \cite{banach,khalil}, and a sub-millisecond Bellman-Ford \texttt{DPLL(QF\_RDL)} invariant check \cite{nieuwenhuis2006}. Across 45 targets in five Python standard-library packages (1,917 AST nodes, 5,997 edges), TCGS ($k=2$) achieves 54.7\% 2-hop recall vs.\ 18.7\% for BM25 ($p = 7.62 \times 10^{-9}$) and 10.4\% for PageRank RepoMap at 16.69$\times$ compression. On factorial live GPU evaluation with official \texttt{google/gemma-4} weights (\texttt{E2B-it} and \texttt{E4B-it} on 2$\times$ Tesla T4, $N=20$ seven-file Python diagnostic repositories, 100 unit tests, 6-call ceiling; SHA-256 \texttt{acf9de0b44c37be3}), Wayfinder achieves 20.0\% vs.\ 5.0\% BM25 on \texttt{E2B-it} and 60.0\% vs.\ 40.0\% BM25 and 50.0\% fixed-$\lambda_0$ DCLV on \texttt{E4B-it} (paired McNemar $p = 0.092285$ vs.\ BM25, $p = 0.375$ vs.\ Fixed DCLV), with 0.0\% cyclic thrashing and 100.0\% verified \texttt{QF\_RDL} witnesses.
 \end{abstract}
 
 \section{Introduction}
-Deploying autonomous repository-repair agents (Jimenez et al., 2024) on local consumer hardware exposes a sharp gap between architectural context length (128K--256K in Gemma~4) and physical KV-cache headroom ($<1.8$~GB remaining on 16~GB Apple Silicon M4 alongside 14.2~GB 4-bit \texttt{26B A4B} weights). Flat chunking and lexical BM25 sever cross-file inheritance and import call chains, while unguarded ReAct loops oscillate in 2-cycle attractors ($S_A \leftrightarrow S_B$). Conversely, naive fixed-ratio contraction ($\lambda_0 = 0.75$) falsely rejects valid single-test atomic fixes when initial defect counts are high. We resolve both limitations via static AST hop-skeletonization and discrete lattice Lyapunov control.
-
-\section{Discrete Contractive Lyapunov Verification}
-Let observable repository state at turn $t$ be $S_t = \langle \mathcal{F}_t, \mathcal{T}_t, \mathcal{U}_t \rangle \in \mathcal{S}$, with file SHA-256 map $\mathcal{F}_t$ (baseline $\mathcal{F}_0$), failing test count $\mathcal{T}_t \in \mathbb{N}_0$, and unresolved static symbols $\mathcal{U}_t \in \mathbb{N}_0$. Because ground-truth patches are unobservable at runtime, we target the zero-defect equivalence manifold $\mathcal{S}^* = \{S \in \mathcal{S} \mid \mathcal{T}=0 \land \mathcal{U}=0\}$ via the observable \textbf{Defect Lyapunov Potential} $V: \mathcal{S} \to \frac{1}{2}\mathbb{N}_0$:
-\begin{equation}
-V(S_t) = \alpha \mathcal{T}_t + \beta \mathcal{U}_t + \gamma \mathbb{I}(\mathcal{T}_t > 0) |\mathcal{F}_t \Delta \mathcal{F}_0|
-\end{equation}
-with $(\alpha, \beta, \gamma) = (1.5, 1.0, 0.5)$ and minimum non-zero lattice quantum $\Delta_{\min} = 0.5$. Notice $V(S_t)=0 \iff S_t \in \mathcal{S}^*$.
-
-To accept valid single-quantum atomic repairs on large $V(S_t)$ while enforcing strict decay, we define the \textbf{State-Adaptive Lattice Contraction Envelope}:
-\begin{equation}
-\lambda_{\text{eff}}(S_t) = \max\!\left(\lambda_0,\; 1 - \frac{\Delta_{\min}}{V(S_t)}\right), \quad 0 < \lambda_0 < 1,
-\end{equation}
-paired with cryptographic state-hash Taboo set $\mathcal{H}_t = \{\text{SHA256}(\mathcal{F}_\tau, \mathcal{T}_\tau, \mathcal{U}_\tau)\}_{\tau=0}^t$ and bounded neutral refactor allowance $B_{\text{neutral}} \in \mathbb{N}_0$.
-
-\begin{theorem}[Finite-Step Termination \& Zero Thrashing]
-Under transactional DCLV acceptance from $V_0 = V(S_0) < \infty$: (i) rejected candidates never mutate $S_t$; (ii) $\mathcal{H}_t$ blocks 100\% of cyclic revisits among $V > 0$ states; (iii) fixed $\lambda_0$ ($B_{\text{neutral}}=0$) reaches $\mathcal{S}^*$ in at most $K_{\text{fixed}} = \lfloor \ln(\Delta_{\min}/V_0)/\ln(\lambda_0)\rfloor + 1$ accepted steps; and (iv) $\lambda_{\text{eff}}(S_t)$ satisfies $V(S_{t+1}) \le V(S_t) - \Delta_{\min}$ on every non-neutral step, terminating in at most $K_{\text{adapt}} \le 2V_0 + B_{\text{neutral}}$ accepted steps.
-\end{theorem}
-\begin{proof}
-Since $V(\mathcal{S}) \subset \frac{1}{2}\mathbb{N}_0$, any state with $V(S_\tau) < \Delta_{\min} = 0.5$ satisfies $V(S_\tau)=0$. Under fixed $\lambda_0$, $\lambda_0^{K_{\text{fixed}}}V_0 < 0.5 \implies V=0$. Under $\lambda_{\text{eff}}(S_t)$, $\lambda_{\text{eff}}(S_t)V(S_t) = \max(\lambda_0 V(S_t), V(S_t) - 0.5) < V(S_t)$, so lattice integrality implies $V(S_{t+1}) \le V(S_t) - 0.5$, yielding at most $2V_0$ contractive steps plus $B_{\text{neutral}}$ non-repeating Taboo-guarded neutral steps.
-\end{proof}
+Deploying autonomous repository-repair agents \cite{jimenez2024} on single-accelerator hardware \cite{gemma4} requires both token-efficient graph textualization \cite{kgllmbench} and inference-time state-space backtracking \cite{tot2024}. Lexical retrieval \cite{repocoder} misses cross-file domain contracts when distractor modules share identifier tokens, while unguarded ReAct loops \cite{yao2023} enter 2-cycle attractors ($S_A \leftrightarrow S_B$). Conversely, fixed-ratio contraction ($\lambda_0=0.75$) over-rejects valid single-file intermediate progress on coupled multi-file bugs ($V: 7.5 \to 6.5 > 5.625$).
 
 \section{Topological Code-Graph Slicing (TCGS)}
-TCGS parses repository ASTs without code execution, linking module imports, base class inheritance, and scoped method calls bidirectionally while dampening utility hubs ($d_{\max}=24$). Given seed symbol $u_0$, $k$-hop BFS emits full AST bodies for hops $d \le 1$ and compact typed interface skeletons (\texttt{signature + docstring}) for hop $d=2$ within a 3,500-token ceiling.
+TCGS parses Python ASTs via \texttt{ast.parse} without executing untrusted code, linking imports, inheritance, and scoped calls bidirectionally (hub cap 24). Breadth-first slicing emits full AST source for hops $d \in \{0,1\}$ and read-only typed interface summaries for hop $d=2$ \cite{kgllmbench}.
 
-\section{Experiments \& Ablations}
-All tables are deterministically generated via \texttt{python3 benchmark\_runner.py} (SHA-256 \texttt{835c2b8d...8e8bd}).
+\section{State-Adaptive DCLV and \texttt{QF\_RDL} Certificate}
+Let observable repository state at turn $t$ be $S_t = \langle \mathcal{F}_t, \mathcal{T}_t, \mathcal{U}_t \rangle \in \mathcal{S}$. Targeting $\mathcal{S}^* = \{S \mid \mathcal{T}=0 \land \mathcal{U}=0\}$ \cite{banach,khalil}, we define $V: \mathcal{S} \to \frac{1}{2}\mathbb{N}_0$ with $(\alpha,\beta,\gamma)=(1.5,1.0,0.5)$ and lattice quantum $\Delta_{\min}=0.5$:
+\begin{equation}
+V(S_t) = \alpha \mathcal{T}_t + \beta \mathcal{U}_t + \gamma \mathbb{I}(\mathcal{T}_t > 0) |\mathcal{F}_t \Delta \mathcal{F}_0|, \quad \lambda_{\text{eff}}(S_t) = \max\!\left(\lambda_0, 1 - \frac{\Delta_{\min}}{V(S_t)}\right).
+\end{equation}
 
-\begin{table}[h]
-\centering
-\scriptsize
-\begin{tabular}{lcccc}
-\toprule
-\textbf{Method ($\le 3.5$k Budget)} & \textbf{Recall} & \textbf{Tokens} & \textbf{Compr.} & \textbf{KV (MB)} \\
-\midrule
-Full-Package Context & 100.0\% & 55,670 & 1.00$\times$ & 10,299.0 \\
-PageRank RepoMap & 10.4\% & 3,497 & 15.92$\times$ & 646.9 \\
-Okapi BM25 Lexical & 19.0\% & 3,496 & 15.93$\times$ & 646.8 \\
-Fixed 500-Tok Chunks & 22.2\% & 6,081 & 9.16$\times$ & 1,125.0 \\
-TCGS $k=1$ (Ours) & 21.4\% & 2,605 & 21.37$\times$ & 481.9 \\
-\textbf{TCGS $k=2$ Skel.\ (Ours)} & \textbf{56.8\%} & \textbf{3,312} & \textbf{16.81$\times$} & \textbf{612.7} \\
-\bottomrule
-\end{tabular}
-\caption{Experiment A: 2-hop AST dependency recall across 45 focal targets in 5 Python standard-library packages (1,917 nodes, 5,997 edges).}
-\end{table}
+\begin{theorem}[Finite-Step Lattice Convergence and Zero Thrashing]
+Under transactional rollback, SHA-256 Taboo $\mathcal{H}_t$, and neutral allowance $B_{\text{neutral}}$, rejected proposals leave $S_t$ invariant, cyclic revisits on $V>0$ equal $0.0\%$, and accepted transitions terminate in at most $K_{\text{adapt}} \le 2V(S_0) + B_{\text{neutral}}$ steps.
+\end{theorem}
+
+\begin{theorem}[\texttt{QF\_RDL} Witness Soundness \cite{nieuwenhuis2006}]
+Encoding contraction, non-negativity, file-blast ($|\tilde{\mathcal{F}} \Delta \mathcal{F}_0| \le B_{\text{files}}$), and prompt-token ($\text{tokens}(\tilde{S}) \le B_{\text{token}}$) bounds as difference inequalities $x_i - x_j \le c_{ij}$, Bellman-Ford relaxation in $O(|\mathcal{X}|\cdot|\mathcal{E}_c|)$ either yields an independently verified witness $\pi$ or extracts a minimal negative-weight cycle.
+\end{theorem}
+
+\section{Empirical Evaluation and Factorial Ablations}
+Telemetry digests: Live GPU \texttt{acf9de0b44c37be3}, Benchmark \texttt{47032dd3e673b4dd}.
 
 \begin{table}[h]
 \centering
 \scriptsize
 \begin{tabular}{lcccc}
 \toprule
-\textbf{Configuration ($N=250$)} & \textbf{Resolve} & \textbf{Turns} & \textbf{Billed Tok} & \textbf{Thrash} \\
+\textbf{Textualization ($\le 3.5$k)} & \textbf{Recall} & \textbf{Tok} & \textbf{Compr.} & \textbf{Wilcoxon $p$} \\
 \midrule
-E4B (Chunk ReAct) & 8.0\% & 7.60 & 49,434 & 35.2\% \\
-\textbf{E4B + Wayfinder (Ours)} & \textbf{40.4\%} & \textbf{1.81} & \textbf{19,138} & \textbf{0.0\%} \\
-26B A4B (Chunk ReAct) & 13.6\% & 7.48 & 48,653 & 35.2\% \\
-26B A4B (PageRank Map) & 7.6\% & 7.66 & 30,004 & 40.8\% \\
-26B A4B (TCGS $k=2$ Only) & 28.8\% & 6.84 & 25,512 & 10.0\% \\
-26B A4B (DCLV + BM25) & 33.6\% & 1.32 & 17,042 & 0.0\% \\
-26B A4B (Weak $\lambda=1$, No Taboo) & 67.2\% & 2.99 & 21,168 & 8.0\% \\
-26B A4B (Fixed $\lambda_0=0.75$ + TCGS) & 54.8\% & 1.71 & 16,077 & 0.0\% \\
-\textbf{26B A4B + Wayfinder (Full)} & \textbf{68.4\%} & \textbf{2.30} & \textbf{17,496} & \textbf{0.0\%} \\
+Full-Package & 100.0\% & 55,670 & 1.0$\times$ & --- \\
+PageRank RepoMap & 10.4\% & 3,497 & 15.92$\times$ & $5.18 \times 10^{-9}$ \\
+Okapi BM25 & 18.7\% & 3,494 & 15.93$\times$ & $7.62 \times 10^{-9}$ \\
+Fixed 500-Chunk & 22.1\% & 6,098 & 9.13$\times$ & $1.41 \times 10^{-8}$ \\
+TCGS $k=1$ & 21.4\% & 2,605 & 21.37$\times$ & $5.18 \times 10^{-9}$ \\
+\textbf{TCGS $k=2$ (Ours)} & \textbf{54.7\%} & \textbf{3,335} & \textbf{16.69$\times$} & \textbf{Optimum} \\
 \bottomrule
 \end{tabular}
-\caption{Experiment B: Controlled multi-turn repair trajectories (\texttt{seed=20261110}); Billed Tok includes rejected rollbacks.}
+\caption{Experiment A: Python stdlib 2-hop recall ($N=45$, 1,917 nodes, 5,997 edges).}
 \end{table}
 
-\section{Limitations \& Conclusion}
-Static AST indexing requires \texttt{tree-sitter} adapters for polyglot repositories and cannot resolve dynamic reflection; semantic repair guarantees remain bounded by test-suite coverage. Combining hop-skeletonized TCGS with State-Adaptive Lattice DCLV unlocks reliable, zero-thrash autonomous SWE execution for on-device Gemma~4 models within consumer unified memory budgets.
+\begin{table*}[t]
+\centering
+\scriptsize
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Live On-GPU Model and Factorial Arm ($N=20$ Repos, 100 Tests)} & \textbf{Resolved} & \textbf{Calls} & \textbf{Billed Tok} & \textbf{Tok/Solved} & \textbf{Rollbacks} & \textbf{Thrash} \\
+\midrule
+Gemma 4 E2B-it + Okapi BM25 (Ungoverned ReAct) & 1/20 (5.0\%) & 6.00 & 5,442 & 108,840 & 0 & 50.0\% \\
+Gemma 4 E2B-it + TCGS k=2 (Ungoverned ReAct) & 4/20 (20.0\%) & 5.35 & 4,777 & 23,885 & 0 & 70.0\% \\
+Gemma 4 E2B-it + TCGS k=2 + Fixed DCLV (lambda\_0=0.75) & 3/20 (15.0\%) & 5.55 & 5,616 & 37,440 & 96 & 0.0\% \\
+\textbf{Gemma 4 E2B-it + Wayfinder Full (TCGS k=2 + Adaptive DCLV + QF\_RDL)} & \textbf{4/20 (20.0\%)} & \textbf{5.45} & \textbf{5,381} & \textbf{26,905} & \textbf{79} & \textbf{0.0\%} \\
+Gemma 4 E4B-it + Okapi BM25 (Ungoverned ReAct) & 8/20 (40.0\%) & 4.90 & 4,500 & 11,250 & 0 & 40.0\% \\
+Gemma 4 E4B-it + TCGS k=2 (Ungoverned ReAct) & 12/20 (60.0\%) & 3.70 & 3,307 & 5,512 & 0 & 35.0\% \\
+Gemma 4 E4B-it + TCGS k=2 + Fixed DCLV (lambda\_0=0.75) & 10/20 (50.0\%) & 4.15 & 3,966 & 7,932 & 55 & 0.0\% \\
+\textbf{Gemma 4 E4B-it + Wayfinder Full (TCGS k=2 + Adaptive DCLV + QF\_RDL)} & \textbf{12/20 (60.0\%)} & \textbf{3.70} & \textbf{3,440} & \textbf{5,733} & \textbf{25} & \textbf{0.0\%} \\
+\bottomrule
+\end{tabular}
+\caption{Experiment B: Factorial live \texttt{google/gemma-4} GPU evaluation on 2$\times$ Tesla T4 (6-call ceiling; exact Gemma 4 billed tokens).}
+\end{table*}
+
+In Experiment C (non-LLM scripted adversarial patch stress suite, $N=15$ three-file repos), Wayfinder resolves 15/15 (100\%) with 36 rollbacks and 30/30 verified \texttt{QF\_RDL} witnesses. Appendix synthetic Markov simulation ($N=250$, non-LLM) illustrates $>6$-turn horizon scaling across $\lambda_0 \in [0.50, 0.95]$.
 
 \begin{thebibliography}{9}
-\bibitem{jimenez2024} C.~E. Jimenez, J.~Yang, A.~Wettig, S.~Yao, K.~Pei, O.~Press, and K.~Narasimhan, ``SWE-bench: Can Language Models Resolve Real-World GitHub Issues?,'' \emph{ICLR}, 2024.
-\bibitem{gemma4} Google Gemma Team, ``Gemma 4 Technical Report: Open Multimodal and Mixture-of-Experts Models,'' \emph{Google DeepMind}, 2026.
-\bibitem{repocoder} Y.~Zhang et al., ``RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation,'' \emph{EMNLP}, 2023.
+\bibitem{gemma4} Gemma Team, Google DeepMind, ``Gemma 4 Technical Report,'' \emph{arXiv:2607.02770}, 2026.
+\bibitem{jimenez2024} C.~E. Jimenez et al., ``SWE-bench: Can Language Models Resolve Real-World GitHub Issues?,'' \emph{ICLR}, 2024.
+\bibitem{tot2024} E.~Markowitz, A.~Ramakrishna, J.~Dhamala, N.~Mehrabi, C.~Peris, R.~Gupta, K.-W.~Chang, and A.~Galstyan, ``Tree-of-Traversals: A Zero-Shot Reasoning Algorithm for Augmenting Black-box Language Models with Knowledge Graphs,'' in \emph{Proc.\ ACL}, pp.\ 12302--12319, 2024.
+\bibitem{kgllmbench} E.~Markowitz, K.~Galiya, G.~Ver~Steeg, and A.~G. Galstyan, ``KG-LLM-Bench: A Scalable Benchmark for Evaluating LLM Reasoning on Textualized Knowledge Graphs,'' \emph{arXiv:2504.07087}, 2025.
+\bibitem{repocoder} F.~Zhang et al., ``RepoCoder: Repository-Level Code Completion Through Iterative Retrieval and Generation,'' \emph{EMNLP}, 2023.
+\bibitem{yao2023} S.~Yao et al., ``ReAct: Synergizing Reasoning and Acting in Language Models,'' \emph{ICLR}, 2023.
+\bibitem{banach} S.~Banach, ``Sur les op\'erations dans les ensembles abstraits et leur application aux \'equations int\'egrales,'' \emph{Fund.\ Math.}, vol.~3, no.~1, pp.~133--181, 1922.
 \bibitem{khalil} H.~K. Khalil, \emph{Nonlinear Systems}, 3rd ed. Prentice Hall, 2002.
-\bibitem{banach} S.~Banach, ``Sur les op\'erations dans les ensembles abstraits et leur application aux \'equations int\'egrales,'' \emph{Fund.\ Math.}, vol.~3, pp.~133--181, 1922.
+\bibitem{nieuwenhuis2006} R.~Nieuwenhuis, A.~Oliveras, and C.~Tinelli, ``Solving SAT and SAT Modulo Theories: From an Abstract Davis--Putnam--Logemann--Loveland Procedure to DPLL(T),'' \emph{J.\ ACM}, vol.~53, no.~6, pp.~937--977, 2006.
 \end{thebibliography}
 
 \end{document}

@@ -39,10 +39,10 @@ from typing import Any, Callable, Dict, List, Set, Tuple
 from harness import (
     DifferenceLogicSMTVerifier,
     DiscreteLyapunovValidator,
-    TRIZContradictionMatrixRouter,
     TopologicalCodeGraph,
     estimate_tokens,
 )
+from live_gemma4_gpu_benchmark import run_self_check as run_20repo_suite_self_check
 
 
 STDLIB_PACKAGES: Tuple[str, ...] = ("email", "urllib", "http", "logging", "unittest")
@@ -311,10 +311,72 @@ def run_experiment_a_stdlib_slicing() -> Dict[str, Any]:
             "kv_cache_26b_a4b_mb": estimate_gemma4_kv_cache_mb(int(round(mean_tok)), "26B_A4B"),
         }
 
+    # Paired statistical tests & 95% bootstrap CIs (TCGS k=2 vs lexical/global baselines across N=45 targets)
+    k2_recs = [r for r, _ in records["tcgs_k2"]]
+    paired_stats: Dict[str, Any] = {}
+    boot_rng = random.Random(20261112)
+    for base_key in ("bm25_lexical", "pagerank_repomap", "fixed_chunk_500", "tcgs_k1"):
+        base_recs = [r for r, _ in records[base_key]]
+        diffs = [a - b for a, b in zip(k2_recs, base_recs)]
+        n_obs = len(diffs)
+        wins = sum(1 for d in diffs if d > 1e-9)
+        losses = sum(1 for d in diffs if d < -1e-9)
+        ties = n_obs - wins - losses
+        n_disc = wins + losses
+        if n_disc > 0:
+            k_min = min(wins, losses)
+            sign_p = min(1.0, 2.0 * sum(math.comb(n_disc, i) for i in range(k_min + 1)) / (2 ** n_disc))
+        else:
+            sign_p = 1.0
+
+        # Wilcoxon signed-rank normal approximation with tie correction
+        non_zero = [(abs(d), 1 if d > 0 else -1) for d in diffs if abs(d) > 1e-9]
+        non_zero.sort(key=lambda x: x[0])
+        w_plus = 0.0
+        idx = 0
+        while idx < len(non_zero):
+            j = idx
+            while j < len(non_zero) and abs(non_zero[j][0] - non_zero[idx][0]) <= 1e-12:
+                j += 1
+            avg_rank = 0.5 * ((idx + 1) + j)
+            for m_idx in range(idx, j):
+                if non_zero[m_idx][1] > 0:
+                    w_plus += avg_rank
+            idx = j
+        nr = len(non_zero)
+        if nr > 0:
+            mu_w = nr * (nr + 1) / 4.0
+            sd_w = math.sqrt(nr * (nr + 1) * (2 * nr + 1) / 24.0)
+            z_val = (w_plus - mu_w) / max(1e-9, sd_w)
+            wilcoxon_p = math.erfc(abs(z_val) / math.sqrt(2.0))
+        else:
+            z_val, wilcoxon_p = 0.0, 1.0
+
+        boot_means: List[float] = []
+        for _ in range(4000):
+            sample = [diffs[boot_rng.randrange(n_obs)] for _ in range(n_obs)]
+            boot_means.append(100.0 * sum(sample) / n_obs)
+        boot_means.sort()
+        ci_lo = round(boot_means[int(0.025 * len(boot_means))], 1)
+        ci_hi = round(boot_means[int(0.975 * len(boot_means))], 1)
+
+        paired_stats[f"tcgs_k2_vs_{base_key}"] = {
+            "n_targets": n_obs,
+            "mean_gain_pct_pts": round(100.0 * sum(diffs) / max(1, n_obs), 1),
+            "bootstrap_95_ci_pct_pts": [ci_lo, ci_hi],
+            "wins": wins,
+            "losses": losses,
+            "ties": ties,
+            "wilcoxon_z": round(z_val, 2),
+            "wilcoxon_two_sided_p": float(f"{wilcoxon_p:.3e}"),
+            "exact_sign_test_p": float(f"{sign_p:.3e}"),
+        }
+
     return {
         "total_targets": total_targets,
         "packages": package_summaries,
         "methods": aggregated,
+        "paired_statistical_tests": paired_stats,
     }
 
 
@@ -870,7 +932,7 @@ def run_experiment_d_live_multifile_bugfix() -> Dict[str, Any]:
          both `service.py` (1-hop defect locus) and `models.py` (2-hop domain class) are recalled.
       3. Runs live Python execution and unit tests on the candidate repair sequence under:
          - Unguided Agent (accepts proposals without Lyapunov/Taboo rollback, halting after 3 steps)
-         - Wayfinder v3.0 (TCGS k=2 + State-Adaptive DCLV + Bellman-Ford QF_RDL SMT Verifier)
+         - Wayfinder v3.1 (TCGS k=2 + State-Adaptive DCLV + Bellman-Ford QF_RDL SMT Verifier)
     """
     tasks = _build_live_bug_tasks()
     total_tasks = len(tasks)
@@ -930,7 +992,7 @@ def run_experiment_d_live_multifile_bugfix() -> Dict[str, Any]:
         if ug_had_cycle:
             unguided_cycles += 1
 
-        # 2. Wayfinder v3.0 (TCGS k=2 + Adaptive DCLV + QF_RDL SMT Verifier)
+        # 2. Wayfinder v3.1 (TCGS k=2 + Adaptive DCLV + QF_RDL SMT Verifier)
         validator = DiscreteLyapunovValidator(
             contraction_factor=0.75,
             max_turns=6,
@@ -943,14 +1005,16 @@ def run_experiment_d_live_multifile_bugfix() -> Dict[str, Any]:
         wf_had_cycle = False
         wf_t, wf_u = init_t, init_u
         accepted_turn_idx = 0
+        slice_tok_cur = slice_tokens_list[-1] if slice_tokens_list else 0
 
         for cand_files in task["candidates"]:
             ct, cu, ch = _evaluate_live_python_repo(cand_files, task["tests"])
-            ok, _ = validator.register_turn(accepted_turn_idx + 1, ch, ct, cu)
+            ok, _ = validator.register_turn(accepted_turn_idx + 1, ch, ct, cu, prompt_tokens=slice_tok_cur)
             wayfinder_smt_checked_steps += 1
             if ok:
                 accepted_turn_idx += 1
-                wayfinder_smt_sat_steps += 1
+                if validator.smt_proofs and validator.smt_proofs[-1].get("witness_independently_verified") is True:
+                    wayfinder_smt_sat_steps += 1
                 sig = DiscreteLyapunovValidator.compute_state_hash(ch, ct, cu)
                 if sig in wf_seen and (ct > 0 or cu > 0):
                     wf_had_cycle = True
@@ -967,7 +1031,14 @@ def run_experiment_d_live_multifile_bugfix() -> Dict[str, Any]:
         if wf_had_cycle:
             wayfinder_cycles += 1
 
+    accepted_total = wayfinder_smt_checked_steps - wayfinder_rejected_rollbacks
     return {
+        "is_scripted_adversarial_patch_stream": True,
+        "methodology_note": (
+            "Deterministic governor & QF_RDL verification stress suite using scripted adversarial patch streams "
+            "(regression -> baseline revisit -> partial fix -> duplicate hash -> complete repair) across 15 "
+            "executable 3-file repositories (60 unit tests)."
+        ),
         "total_live_repositories": total_tasks,
         "defect_families_count": len(per_family_stats),
         "tcgs_k2_cross_file_recall_pct": round(100.0 * tcgs_2hop_full_recall_count / total_tasks, 1),
@@ -982,8 +1053,10 @@ def run_experiment_d_live_multifile_bugfix() -> Dict[str, Any]:
             "resolved_count": wayfinder_resolved,
             "cyclic_thrash_rate_pct": round(100.0 * wayfinder_cycles / total_tasks, 1),
             "rejected_bad_proposals_rolled_back": wayfinder_rejected_rollbacks,
+            "accepted_steps_count": accepted_total,
+            "independently_verified_qf_rdl_witnesses": wayfinder_smt_sat_steps,
             "accepted_steps_qf_rdl_sat_pct": round(
-                100.0 * wayfinder_smt_sat_steps / max(1, wayfinder_smt_sat_steps), 1
+                100.0 * wayfinder_smt_sat_steps / max(1, accepted_total), 1
             ),
             "total_candidate_evaluations": wayfinder_smt_checked_steps,
         },
@@ -1010,7 +1083,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
 
     exp_b_rows = [
         _simulate_configuration(
-            name="Gemma 4 E4B (Fixed-Chunk ReAct, No Governor)",
+            name="Synthetic Sim (cap=0.34, Fixed-Chunk, No Governor)",
             n_tasks=n_tasks,
             seed=base_seed + 1,
             context_recall=rec_fc,
@@ -1019,7 +1092,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="none",
         ),
         _simulate_configuration(
-            name="Gemma 4 E4B + Wayfinder (TCGS k=2 + Adaptive DCLV)",
+            name="Synthetic Sim (cap=0.34 + TCGS k=2 + Adaptive DCLV)",
             n_tasks=n_tasks,
             seed=base_seed + 2,
             context_recall=rec_k2,
@@ -1030,7 +1103,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             adaptive_envelope=True,
         ),
         _simulate_configuration(
-            name="Gemma 4 12B (BM25 Lexical, No Governor)",
+            name="Synthetic Sim (cap=0.44, BM25 Lexical, No Governor)",
             n_tasks=n_tasks,
             seed=base_seed + 3,
             context_recall=rec_bm,
@@ -1039,7 +1112,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="none",
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (Fixed-Chunk ReAct, No Governor)",
+            name="Synthetic Sim (cap=0.52, Fixed-Chunk, No Governor)",
             n_tasks=n_tasks,
             seed=base_seed + 4,
             context_recall=rec_fc,
@@ -1048,7 +1121,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="none",
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (PageRank RepoMap, No Governor)",
+            name="Synthetic Sim (cap=0.52, PageRank RepoMap, No Governor)",
             n_tasks=n_tasks,
             seed=base_seed + 5,
             context_recall=rec_pr,
@@ -1057,7 +1130,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="none",
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (TCGS k=2 Only, No Governor)",
+            name="Synthetic Sim (cap=0.52, TCGS k=2 Only, No Governor)",
             n_tasks=n_tasks,
             seed=base_seed + 6,
             context_recall=rec_k2,
@@ -1066,7 +1139,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="none",
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (Weak Monotonicity lambda=1.0, No Taboo)",
+            name="Synthetic Sim (cap=0.52, Weak Monotonic lambda=1.0, No Taboo)",
             n_tasks=n_tasks,
             seed=base_seed + 7,
             context_recall=rec_k2,
@@ -1075,7 +1148,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             governor_mode="weak_monotonic",
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (DCLV lambda=0.75 Only, BM25 Context)",
+            name="Synthetic Sim (cap=0.52, Fixed DCLV lambda_0=0.75, BM25)",
             n_tasks=n_tasks,
             seed=base_seed + 8,
             context_recall=rec_bm,
@@ -1085,7 +1158,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             contraction_lambda=0.75,
         ),
         _simulate_configuration(
-            name="Gemma 4 26B A4B (Fixed-Lambda DCLV lambda=0.75 + TCGS k=2)",
+            name="Synthetic Sim (cap=0.52, Fixed DCLV lambda_0=0.75 + TCGS k=2)",
             n_tasks=n_tasks,
             seed=base_seed + 9,
             context_recall=rec_k2,
@@ -1096,7 +1169,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
             adaptive_envelope=False,
         ),
         _simulate_configuration(
-            name="Wayfinder-Gemma 4 26B A4B (Full: TCGS k=2 + Adaptive DCLV + Taboo)",
+            name="Synthetic Sim (cap=0.52, Full: TCGS k=2 + Adaptive DCLV + Taboo)",
             n_tasks=n_tasks,
             seed=base_seed + 10,
             context_recall=rec_k2,
@@ -1111,7 +1184,7 @@ def run_all_benchmarks() -> Dict[str, Any]:
     lambda_sweep = []
     for idx, lam in enumerate((0.50, 0.65, 0.75, 0.85, 0.95)):
         res = _simulate_configuration(
-            name=f"lambda={lam:.2f}",
+            name=f"Synthetic Sim lambda_0={lam:.2f}",
             n_tasks=n_tasks,
             seed=base_seed + 20 + idx,
             context_recall=rec_k2,
@@ -1125,28 +1198,56 @@ def run_all_benchmarks() -> Dict[str, Any]:
         lambda_sweep.append(res)
 
     exp_d = run_experiment_d_live_multifile_bugfix()
+    suite_20_check = run_20repo_suite_self_check()
+
+    out_dir = Path(__file__).resolve().parent / "results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    live_gpu_path = out_dir / "live_gemma4_gpu_telemetry.json"
+    live_gpu_summary: Dict[str, Any] = {"available": False}
+    if live_gpu_path.exists():
+        gpu_data = json.loads(live_gpu_path.read_text(encoding="utf-8"))
+        canon_gpu = json.dumps(
+            {k: v for k, v in gpu_data.items() if k not in ("execution_timestamp_utc", "sha256_digest")},
+            sort_keys=True,
+        ).encode("utf-8")
+        computed_sha = hashlib.sha256(canon_gpu).hexdigest()
+        live_gpu_summary = {
+            "available": True,
+            "digest_verified": computed_sha == gpu_data.get("sha256_digest"),
+            "sha256_digest": gpu_data.get("sha256_digest"),
+            "hardware_and_runtime": gpu_data.get("hardware_and_runtime"),
+            "e2b_configurations": [
+                {k: v for k, v in c.items() if k != "per_repo_outcomes"}
+                for c in gpu_data["models"]["gemma_4_e2b_it"]["configurations"]
+            ],
+            "e4b_configurations": [
+                {k: v for k, v in c.items() if k != "per_repo_outcomes"}
+                for c in gpu_data["models"]["gemma_4_e4b_it"]["configurations"]
+            ],
+            "paired_statistical_tests_n40": gpu_data.get("paired_statistical_tests_n40"),
+        }
 
     elapsed_s = round(time.time() - t0, 3)
     payload: Dict[str, Any] = {
-        "benchmark_version": "3.0.0",
+        "benchmark_version": "3.1.0",
         "seed": base_seed,
         "elapsed_seconds": elapsed_s,
-        "triz_contradiction_mappings": {
-            "tcgs_31_vs_12": TRIZContradictionMatrixRouter.lookup(31, 12),
-            "dclv_09_vs_27": TRIZContradictionMatrixRouter.lookup(9, 27),
-        },
         "experiment_a_stdlib_ast_slicing": exp_a,
-        "experiment_b_trajectory_ablation": {
+        "experiment_b_live_gemma4_gpu_suite": {
+            "suite_self_check": suite_20_check,
+            "live_gpu_telemetry_summary": live_gpu_summary,
+        },
+        "experiment_c_deterministic_governor_stress": exp_d,
+        "appendix_synthetic_markov_sensitivity_simulation": {
+            "is_synthetic_simulation": True,
             "n_tasks": n_tasks,
             "methodology_note": (
-                "Controlled Monte Carlo multi-turn defect trajectory benchmark seeded deterministically "
-                "(seed=20261110) parameterized by measured Experiment A AST dependency recall, explicitly "
-                "reporting both Accepted Trajectory Tokens and Total Billed Tokens (including rejected rollbacks)."
+                "Explicitly labeled synthetic parametric Markov-chain horizon & contraction-factor sensitivity "
+                "simulation (seed=20261110, N=250) parameterized by Experiment A AST recall; NOT live LLM inference."
             ),
-            "results": exp_b_rows,
+            "ablation_rows": exp_b_rows,
+            "lambda_sensitivity_sweep": lambda_sweep,
         },
-        "experiment_c_lambda_sensitivity": lambda_sweep,
-        "experiment_d_live_multifile_bugfix": exp_d,
     }
     canonical = json.dumps(
         {k: v for k, v in payload.items() if k != "elapsed_seconds"},
@@ -1154,8 +1255,6 @@ def run_all_benchmarks() -> Dict[str, Any]:
     ).encode("utf-8")
     payload["sha256_digest"] = hashlib.sha256(canonical).hexdigest()
 
-    out_dir = Path(__file__).resolve().parent / "results"
-    out_dir.mkdir(parents=True, exist_ok=True)
     out_file = out_dir / "benchmark_telemetry.json"
     out_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     return payload
