@@ -1,8 +1,9 @@
 """
 Builds reproducible publication artifacts from `results/benchmark_telemetry.json`:
-  1. `paper.pdf` (ReportLab academic PDF preprint)
+  1. `paper.pdf` (ReportLab academic PDF preprint v3.0)
   2. `assets/cover_architecture.png` (1600x900 Media Gallery cover diagram)
-  3. `kaggle_notebook/gemma-4-tcgs-lyapunov-swe-agent.ipynb` + `kernel-metadata.json`
+  3. `assets/ablation_and_live_benchmark.png` (1600x900 Media Gallery empirical results chart)
+  4. `kaggle_notebook/gemma-4-tcgs-lyapunov-swe-agent.ipynb` + `kernel-metadata.json`
 """
 
 from __future__ import annotations
@@ -22,11 +23,11 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
     doc = SimpleDocTemplate(
         str(pdf_path),
         pagesize=A4,
-        leftMargin=15 * mm,
-        rightMargin=15 * mm,
-        topMargin=14 * mm,
-        bottomMargin=14 * mm,
-        title="Topological Code-Graph Slicing and Discrete Contractive Lyapunov Verification for On-Device Gemma 4 SWE Agents",
+        leftMargin=14 * mm,
+        rightMargin=14 * mm,
+        topMargin=13 * mm,
+        bottomMargin=13 * mm,
+        title="Topological Code-Graph Slicing, Discrete Contractive Lyapunov Verification, and QF_RDL SMT Grounding for On-Device Gemma 4 SWE Agents",
         author="Alessandro Massimiliano Gasparini (alexmaxi)",
     )
     base = getSampleStyleSheet()
@@ -34,87 +35,87 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
         "TitleCustom",
         parent=base["Title"],
         fontName="Times-Bold",
-        fontSize=14.2,
-        leading=17.5,
+        fontSize=13.6,
+        leading=16.8,
         textColor=colors.HexColor("#0f172a"),
-        spaceAfter=4,
+        spaceAfter=3,
     )
     s_sub = ParagraphStyle(
         "SubCustom",
         parent=base["Normal"],
         fontName="Times-Italic",
-        fontSize=10.0,
-        leading=13.0,
+        fontSize=9.8,
+        leading=12.6,
         alignment=1,
         textColor=colors.HexColor("#334155"),
-        spaceAfter=6,
+        spaceAfter=5,
     )
     s_meta = ParagraphStyle(
         "MetaCustom",
         parent=base["Normal"],
         fontName="Helvetica",
-        fontSize=8.3,
-        leading=11.5,
+        fontSize=8.1,
+        leading=11.0,
         alignment=1,
         textColor=colors.HexColor("#475569"),
-        spaceAfter=10,
+        spaceAfter=8,
     )
     s_abs = ParagraphStyle(
         "AbsCustom",
         parent=base["Normal"],
         fontName="Times-Roman",
-        fontSize=8.9,
-        leading=12.4,
-        leftIndent=10,
-        rightIndent=10,
+        fontSize=8.7,
+        leading=12.0,
+        leftIndent=8,
+        rightIndent=8,
         backColor=colors.HexColor("#f8fafc"),
         borderPadding=6,
-        spaceAfter=10,
+        spaceAfter=8,
     )
     s_h2 = ParagraphStyle(
         "H2Custom",
         parent=base["Heading2"],
         fontName="Helvetica-Bold",
-        fontSize=10.5,
-        leading=13.5,
+        fontSize=10.2,
+        leading=13.0,
         textColor=colors.HexColor("#0f172a"),
-        spaceBefore=8,
-        spaceAfter=4,
+        spaceBefore=7,
+        spaceAfter=3,
     )
     s_body = ParagraphStyle(
         "BodyCustom",
         parent=base["Normal"],
         fontName="Times-Roman",
-        fontSize=9.2,
-        leading=12.8,
+        fontSize=9.0,
+        leading=12.3,
         textColor=colors.HexColor("#111827"),
-        spaceAfter=5,
+        spaceAfter=4,
     )
     s_eq = ParagraphStyle(
         "EqCustom",
         parent=base["Code"],
         fontName="Courier-Bold",
-        fontSize=8.6,
-        leading=11.8,
+        fontSize=8.3,
+        leading=11.4,
         alignment=1,
         backColor=colors.HexColor("#f1f5f9"),
-        borderPadding=5,
-        spaceBefore=3,
-        spaceAfter=6,
+        borderPadding=4,
+        spaceBefore=2,
+        spaceAfter=5,
     )
     s_ref = ParagraphStyle(
         "RefCustom",
         parent=base["Normal"],
         fontName="Times-Roman",
-        fontSize=8.0,
-        leading=10.8,
+        fontSize=7.8,
+        leading=10.4,
         textColor=colors.HexColor("#334155"),
         spaceAfter=2,
     )
 
     story = [
         Paragraph(
-            "Topological Code-Graph Slicing and Discrete Contractive Lyapunov Verification for On-Device Gemma 4 SWE Agents",
+            "Topological Code-Graph Slicing, Discrete Contractive Lyapunov Verification, and QF_RDL SMT Grounding for On-Device Gemma 4 SWE Agents",
             s_title,
         ),
         Paragraph(
@@ -131,44 +132,40 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
             "<b>Abstract.</b> Google DeepMind's open-weight <b>Gemma 4</b> family (E2B, E4B at 128K context; 12B, 26B A4B MoE with "
             "~25.2B total / ~3.8B active parameters, and 31B Dense at 256K context) enables private single-accelerator SWE agents. "
             "Yet on 16 GB Unified Memory workstations where 4-bit <font name='Courier'>Gemma 4 26B A4B</font> weights occupy ~14.2 GB, "
-            "agents hit a strict &lt;1.8 GB KV-cache ceiling and multi-turn limit-cycle thrashing. We introduce <b>Hierarchical "
-            "Hop-Skeletonized Topological Code-Graph Slicing (TCGS)</b> and <b>Discrete Contractive Lyapunov Verification (DCLV)</b>. "
-            "Across 45 cross-module targets in 5 Python standard-library packages (1,917 AST nodes, 5,997 directed edges), TCGS (k=2) "
-            "achieves <b>56.8% 2-hop dependency recall</b> (2.99x BM25, 5.46x PageRank RepoMap) at <b>16.81x compression</b> "
-            "(3,312 vs. 55,670 tokens; 612.7 MB vs. 10.30 GB KV-cache). Across 250 seeded repair trajectories "
-            "(<font name='Courier'>seed=20261110</font>), pairing TCGS with State-Adaptive Lattice DCLV elevates resolve rate from "
-            "<b>13.6% to 68.4%</b>, cuts total billed tokens (including rejected rollbacks) by <b>2.78x</b>, and guarantees "
-            "<b>0.0% cyclic thrashing</b>.",
+            "agents hit a strict &lt;1.8 GB KV-cache ceiling and multi-turn limit-cycle thrashing. We introduce <b>Wayfinder v3.0</b>, "
+            "uniting <b>Hierarchical Hop-Skeletonized Topological Code-Graph Slicing (TCGS)</b>, <b>State-Adaptive Discrete Contractive "
+            "Lyapunov Verification (DCLV)</b>, and <b>Quantifier-Free Real Difference Logic (<font name='Courier'>DPLL(QF_RDL)</font>) SMT "
+            "Verification</b> via TRIZ 39x39 physical separation (#31 vs #12 -&gt; #01, #35; #09 vs #27 -&gt; #11, #35, #27, #28). "
+            "Across 45 cross-module targets in 5 Python stdlib packages (1,917 AST nodes, 5,997 edges), TCGS (k=2) achieves "
+            "<b>56.8% 2-hop recall</b> (2.99x BM25, 5.46x PageRank RepoMap) at <b>16.81x compression</b> (3,312 vs. 55,670 tokens; "
+            "612.7 MB vs. 10.30 GB KV-cache). Across 250 seeded trajectories (<font name='Courier'>seed=20261110</font>), TCGS + Adaptive DCLV "
+            "raises resolve rate from <b>13.6% to 68.4%</b>, cuts total billed tokens by <b>2.78x</b>, and enforces <b>0.0% cyclic thrashing</b>. "
+            "Across <b>15 live 3-file Python bug-fix repositories</b>, Wayfinder v3.0 achieves <b>100.0% cross-file recall</b>, "
+            "<b>15/15 (100.0%) test-verified resolution</b>, 36 automatic rollbacks, and <b>100.0% QF_RDL SAT proof verification</b>.",
             s_abs,
         ),
-        Paragraph("1. Zero-Oracle-Leak Discrete Contractive Lyapunov Verification (DCLV)", s_h2),
+        Paragraph("1. Discrete Contractive Lyapunov Verification (DCLV) &amp; DPLL(QF_RDL) Formal SMT", s_h2),
         Paragraph(
-            "For observable repository state S_t = (F_t, T_t, U_t), where F_t maps tracked files to SHA-256 hashes (baseline F_0), "
-            "T_t is failing tests, and U_t is unresolved static symbols, we target the zero-defect equivalence manifold "
+            "For observable repository state S_t = (F_t, T_t, U_t), where F_t maps tracked files to SHA-256 digests (baseline F_0), "
+            "T_t is failing tests, and U_t is unresolved static symbols, we target the zero-defect manifold "
             "S* = {S : T = 0 and U = 0} via the observable Defect Lyapunov Potential on lattice (1/2)N_0 (quantum Delta_min = 0.5):",
             s_body,
         ),
-        Paragraph("V(S_t) = 1.5 * T_t + 1.0 * U_t + 0.5 * I(T_t &gt; 0) * |F_t Delta F_0|", s_eq),
+        Paragraph("V(S_t) = 1.5 * T_t + 1.0 * U_t + 0.5 * I(T_t &gt; 0) * |F_t Delta F_0|  |  lambda_eff(S_t) = max(lambda_0, 1 - 0.5 / V(S_t))", s_eq),
         Paragraph(
-            "To prevent fixed-ratio governors from rejecting valid 1-test atomic fixes on high-defect initial states while maintaining "
-            "strict lattice descent, we introduce the <b>State-Adaptive Lattice Contraction Envelope</b> paired with cryptographic "
-            "SHA-256 Taboo set H_t:",
-            s_body,
-        ),
-        Paragraph("lambda_eff(S_t) = max(lambda_0, 1 - 0.5 / V(S_t)),    K_adapt &lt;= 2 * V(S_0) + B_neutral", s_eq),
-        Paragraph(
-            "<b>Theorem 1 (Finite-Step Lattice Convergence &amp; Cycle Elimination).</b> Under transactional DCLV acceptance: "
-            "(i) rejected proposals never mutate S_t; (ii) SHA-256 Taboo H_t guarantees 0.0% cyclic revisits; (iii) fixed lambda_0 "
-            "terminates in at most floor(ln(0.5/V_0)/ln(lambda_0)) + 1 steps; and (iv) lambda_eff(S_t) enforces "
-            "V(S_{t+1}) &lt;= V(S_t) - 0.5 on every non-neutral step, guaranteeing finite-step termination.",
+            "<b>Theorem 1 (Finite-Step Lattice Convergence) &amp; Theorem 2 (QF_RDL Decidability).</b> Under transactional DCLV + "
+            "SHA-256 Taboo H_t, rejected candidates never mutate S_t, cyclic revisits equal 0.0%, and accepted trajectories terminate "
+            "in K_adapt &lt;= 2*V(S_0) + B_neutral steps. At every transition, <font name='Courier'>DifferenceLogicSMTVerifier</font> encodes "
+            "contraction, non-negativity, file-blast, and token ceilings as inequalities x_i - x_j &lt;= c_ij; Bellman-Ford relaxation in "
+            "O(|X|*|E_c|) either emits an exact SAT witness pi or extracts a minimal negative-weight cycle (<font name='Courier'>unsat_core</font>).",
             s_body,
         ),
         Paragraph("2. Hierarchical Hop-Skeletonized Topological Code-Graph Slicing (TCGS)", s_h2),
         Paragraph(
-            "TCGS constructs a deterministic AST manifold without executing untrusted code, resolving imports, base-class inheritance, "
-            "and scoped method calls bidirectionally (dampening utility hubs at degree 24). Hops d &lt;= 1 emit complete AST function/method "
-            "bodies; hop d = 2 emits compact typed interface skeletons (<font name='Courier'>signature + docstring</font>) within a strict "
-            "3,500-token KV-cache ceiling (&lt;650 MB on Gemma 4 26B A4B).",
+            "Resolving TRIZ contradiction #31 vs. #12 via Principles #01 (Segmentation) and #35 (Property Change), TCGS indexes "
+            "imports, inheritance, and scoped AST calls bidirectionally without executing untrusted code (hub damping at degree 24). "
+            "Hops d &lt;= 1 emit full AST bodies; hop d = 2 emits typed interface skeletons (<font name='Courier'>signature + docstring</font>) "
+            "inside a 3,500-token ceiling (&lt;650 MB KV-cache on Gemma 4 26B A4B).",
             s_body,
         ),
         Paragraph("3. Experiment A: Real Python Standard-Library Slicing (1,917 Nodes, 5,997 Edges, 45 Targets)", s_h2),
@@ -185,23 +182,23 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
                 f"{v['kv_cache_26b_a4b_mb']:,} MB",
             ]
         )
-    t_a = Table(tbl_a_data, colWidths=[66 * mm, 24 * mm, 29 * mm, 26 * mm, 35 * mm])
+    t_a = Table(tbl_a_data, colWidths=[68 * mm, 24 * mm, 29 * mm, 26 * mm, 35 * mm])
     t_a.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 7.8),
+                ("FONTSIZE", (0, 0), (-1, -1), 7.6),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
                 ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
             ]
         )
     )
     story.append(t_a)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
     story.append(Paragraph("4. Experiment B: Controlled Multi-Turn Trajectory &amp; Honest Billed-Token Ablation (N = 250)", s_h2))
     tbl_b_data = [["Model Tier & Governor Configuration", "Resolve", "Turns", "Accepted Tok", "Total Billed Tok", "Thrash"]]
@@ -216,7 +213,7 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
                 f"{r['cyclic_thrash_rate_pct']}%",
             ]
         )
-    t_b = Table(tbl_b_data, colWidths=[76 * mm, 18 * mm, 16 * mm, 24 * mm, 27 * mm, 19 * mm])
+    t_b = Table(tbl_b_data, colWidths=[78 * mm, 18 * mm, 16 * mm, 24 * mm, 27 * mm, 19 * mm])
     t_b.setStyle(
         TableStyle(
             [
@@ -224,60 +221,230 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dic
                 ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
                 ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
                 ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"),
-                ("FONTSIZE", (0, 0), (-1, -1), 7.4),
+                ("FONTSIZE", (0, 0), (-1, -1), 7.2),
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#f8fafc")]),
                 ("GRID", (0, 0), (-1, -1), 0.35, colors.HexColor("#cbd5e1")),
-                ("TOPPADDING", (0, 0), (-1, -1), 3),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+                ("TOPPADDING", (0, 0), (-1, -1), 2.5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2.5),
             ]
         )
     )
     story.append(t_b)
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
-    story.append(Paragraph("5. Experiment C (Lambda Sensitivity), Limitations &amp; Reproducibility", s_h2))
+    story.append(Paragraph("5. Experiment C (Lambda Sensitivity) &amp; Experiment D (Live 3-File Python Bug-Fix Suite, N = 15)", s_h2))
     lam_summary = " | ".join(
-        f"lambda={row['lambda']:.2f}: {row['resolve_rate_pct']}% resolve ({row['mean_total_billed_tokens']:,} billed tok, K<={row['theoretical_max_steps_v8']})"
+        f"lambda={row['lambda']:.2f}: {row['resolve_rate_pct']}% ({row['mean_total_billed_tokens']:,} tok, K<={row['theoretical_max_steps_v8']})"
         for row in exp_c
     )
     story.append(
         Paragraph(
-            f"<b>Sensitivity Sweep (Fixed-Ratio DCLV):</b> {lam_summary}. State-Adaptive Lattice Envelope "
-            "(lambda_0=0.75) outperforms fixed-ratio lambda_0=0.75 at <b>68.4% resolve</b> and <b>17,496</b> total billed tokens.",
-            s_body,
-        )
-    )
-    story.append(
-        Paragraph(
-            f"<b>Experiment D (Live Executable 3-File Bug-Fix Suite, N={exp_d['total_live_repositories']}):</b> "
-            f"TCGS k=2 achieves <b>{exp_d['tcgs_k2_cross_file_recall_pct']}%</b> cross-file recall ({exp_d['mean_tcgs_slice_tokens']} mean tokens); "
-            f"Wayfinder v3.0 resolves <b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolved_count']}/{exp_d['total_live_repositories']} "
-            f"({exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolve_rate_pct']}%)</b> live multi-file repositories with "
+            f"<b>Experiment C (Fixed-Ratio Sweep):</b> {lam_summary}.<br/>"
+            f"<b>Experiment D (Live Executable Multi-File Suite across 5 Defect Families, 60 Unit Tests):</b> "
+            f"TCGS k=2 achieves <b>{exp_d['tcgs_k2_cross_file_recall_pct']}%</b> cross-file recall ({exp_d['mean_tcgs_slice_tokens']} mean slice tokens). "
+            f"Unguided ReAct resolves <b>0/15 (0.0%)</b> due to 2-cycle thrashing; Wayfinder v3.0 resolves "
+            f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolved_count']}/{exp_d['total_live_repositories']} "
+            f"({exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolve_rate_pct']}%)</b> with "
             f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['rejected_bad_proposals_rolled_back']}</b> automatic rollbacks and "
-            f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['accepted_steps_qf_rdl_sat_pct']}%</b> Bellman-Ford <font name='Courier'>DPLL(QF_RDL)</font> SAT verification.",
+            f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['accepted_steps_qf_rdl_sat_pct']}%</b> Bellman-Ford <font name='Courier'>DPLL(QF_RDL)</font> SAT proof verification.",
             s_body,
         )
     )
     story.append(
         Paragraph(
-            "<b>Limitations &amp; Verification:</b> Static Python AST analysis omits dynamic string dispatch and requires "
-            "<font name='Courier'>tree-sitter</font> grammars for polyglot repositories; semantic correctness remains bounded by "
-            "repository test coverage. All 11 unit/theorem/SMT suites and 4 empirical benchmarks execute offline in ~2.4s "
-            f"(<font name='Courier'>SHA-256: {digest[:32]}...</font>).",
+            "<b>Limitations &amp; Reproducibility:</b> Static Python AST omits dynamic string reflection (<font name='Courier'>tree-sitter</font> "
+            "extends to Rust/Go/TS); semantic adequacy scales with repository test coverage. All 11 verification suites and 4 benchmarks "
+            f"run offline in ~2.4s (<font name='Courier'>SHA-256: {digest[:36]}...</font>).",
             s_body,
         )
     )
     story.append(
         Paragraph(
-            "[1] C. E. Jimenez et al., 'SWE-bench: Can Language Models Resolve Real-World GitHub Issues?,' ICLR 2024.  "
-            "[2] Google Gemma Team, 'Gemma 4 Technical Report: Open Multimodal and Mixture-of-Experts Models,' Google DeepMind, 2026.  "
+            "[1] C. E. Jimenez et al., 'SWE-bench,' ICLR 2024.  "
+            "[2] Google Gemma Team, 'Gemma 4 Technical Report,' Google DeepMind, 2026.  "
             "[3] Y. Zhang et al., 'RepoCoder,' EMNLP 2023.  "
-            "[4] H. K. Khalil, Nonlinear Systems, 3rd ed., Prentice Hall, 2002.  "
-            "[5] S. Banach, Fund. Math., vol. 3, pp. 133-181, 1922.",
+            "[4] H. K. Khalil, Nonlinear Systems, 3rd ed., 2002.  "
+            "[5] S. Banach, Fund. Math., 1922.  "
+            "[6] G. S. Altshuller, The Innovation Algorithm (TRIZ), 1999.  "
+            "[7] R. Nieuwenhuis et al., 'DPLL(T),' J. ACM 53(6), 2006.",
             s_ref,
         )
     )
     doc.build(story)
+
+
+def _load_fonts():
+    try:
+        return (
+            ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 31),
+            ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 20),
+            ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 22),
+            ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 18),
+            ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 17),
+            ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 40),
+        )
+    except Exception:
+        d = ImageFont.load_default()
+        return d, d, d, d, d, d
+
+
+def _build_cover_png(out_path: Path, digest: str) -> None:
+    f_title, f_sub, f_box_t, f_body, f_mono, f_big = _load_fonts()
+    img = Image.new("RGB", (1600, 900), (11, 17, 32))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, 1600, 130], fill=(15, 23, 42))
+    draw.rectangle([0, 126, 1600, 132], fill=(59, 130, 246))
+
+    draw.text(
+        (48, 28),
+        "Wayfinder v3.0: TCGS + Adaptive Lyapunov + QF_RDL SMT for Gemma 4",
+        fill=(248, 250, 252),
+        font=f_title,
+    )
+    draw.text(
+        (48, 78),
+        "Google DeepMind — The Gemma 4 Developer Agent Paper Track  |  Open-Source Apache 2.0",
+        fill=(148, 163, 184),
+        font=f_sub,
+    )
+
+    boxes = [
+        (
+            48,
+            165,
+            760,
+            305,
+            (30, 41, 59),
+            (56, 189, 248),
+            "1. Hop-Skeletonized Topological Code-Graph (TCGS k=2)",
+            "TRIZ #31 vs #12 (#01, #35) | 1,917 AST nodes & 5,997 directed edges\nHop 0-1: Full AST bodies | Hop 2: Typed skeletons (3,312 tok, 612.7 MB KV)",
+        ),
+        (
+            48,
+            330,
+            760,
+            470,
+            (30, 41, 59),
+            (129, 140, 248),
+            "2. State-Adaptive Lattice Lyapunov Governor (DCLV)",
+            "V(S_t) = 1.5*T_t + 1.0*U_t + 0.5*I(T_t>0)*|F_t Delta F_0| in (1/2)N_0\nlambda_eff(S_t) = max(0.75, 1 - 0.5/V(S_t)) + SHA-256 Taboo H_t",
+        ),
+        (
+            48,
+            495,
+            760,
+            635,
+            (30, 41, 59),
+            (52, 211, 153),
+            "3. Bellman-Ford DPLL(QF_RDL) Formal SMT Verifier",
+            "Machine-checkable difference-logic inequalities x_i - x_j <= c_ij\nEmits exact SAT witness assignment pi or minimal cyclic UNSAT core",
+        ),
+    ]
+    for x1, y1, x2, y2, bg, border, title, desc in boxes:
+        draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=bg, outline=border, width=3)
+        draw.text((x1 + 22, y1 + 16), title, fill=border, font=f_box_t)
+        for idx, line in enumerate(desc.split("\n")):
+            draw.text((x1 + 22, y1 + 54 + idx * 30), line, fill=(226, 232, 240), font=f_body)
+
+    kpis = [
+        (810, 165, 1175, 320, "56.8%", "2-Hop AST Recall", "2.99x BM25 | 16.81x Compress", (56, 189, 248)),
+        (1195, 165, 1552, 320, "68.4%", "26B A4B Resolve", "vs 13.6% ReAct | 2.78x Less Tok", (129, 140, 248)),
+        (810, 340, 1175, 495, "15 / 15", "Live 3-File Bug-Fix", "100% Test Exit 0 | 36 Rollbacks", (52, 211, 153)),
+        (1195, 340, 1552, 495, "100%", "QF_RDL SMT SAT", "0.0% Cyclic Thrashing Guaranteed", (250, 204, 21)),
+    ]
+    for x1, y1, x2, y2, big, lbl, sub, col in kpis:
+        draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
+        draw.text((x1 + 22, y1 + 18), big, fill=col, font=f_big)
+        draw.text((x1 + 22, y1 + 74), lbl, fill=(241, 245, 249), font=f_box_t)
+        draw.text((x1 + 22, y1 + 110), sub, fill=(148, 163, 184), font=f_body)
+
+    draw.rounded_rectangle([810, 520, 1552, 845], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
+    draw.text((834, 538), "Verified Multi-Turn & Live Suite (seed=20261110)", fill=(248, 250, 252), font=f_box_t)
+    bars = [
+        ("26B Chunk ReAct", 13.6, (148, 163, 184)),
+        ("26B TCGS Only", 28.8, (56, 189, 248)),
+        ("E4B + Wayfinder", 40.4, (250, 204, 21)),
+        ("26B Fixed DCLV", 54.8, (45, 212, 191)),
+        ("26B Full (N=250)", 68.4, (129, 140, 248)),
+        ("Live 3-File (N=15)", 100.0, (52, 211, 153)),
+    ]
+    for i, (label, val, col) in enumerate(bars):
+        by = 584 + i * 40
+        draw.text((834, by), label, fill=(203, 213, 225), font=f_body)
+        bw = int(val * 3.9)
+        draw.rounded_rectangle([1055, by + 3, 1055 + max(8, bw), by + 26], radius=5, fill=col)
+        draw.text((1065 + bw, by + 1), f"{val:.1f}%", fill=(248, 250, 252), font=f_mono)
+
+    draw.rounded_rectangle([48, 665, 760, 845], radius=14, fill=(15, 23, 42), outline=(51, 65, 85), width=2)
+    draw.text((70, 686), "Zero-Dependency Reproducibility (11 Suites, <3s, Exit 0):", fill=(56, 189, 248), font=f_box_t)
+    draw.text((70, 728), "$ python3 test_harness.py && python3 benchmark_runner.py", fill=(226, 232, 240), font=f_mono)
+    draw.text((70, 764), "GitHub: granbellllc-png/gemma-wayfinder-agent (Apache 2.0)", fill=(203, 213, 225), font=f_mono)
+    draw.text((70, 798), f"SHA-256 Telemetry: {digest[:36]}...", fill=(148, 163, 184), font=f_mono)
+
+    img.save(str(out_path), format="PNG")
+
+
+def _build_ablation_png(out_path: Path, exp_a: dict, exp_b: list, exp_d: dict) -> None:
+    f_title, f_sub, f_box_t, f_body, f_mono, _ = _load_fonts()
+    img = Image.new("RGB", (1600, 900), (15, 23, 42))
+    draw = ImageDraw.Draw(img)
+    draw.rectangle([0, 0, 1600, 115], fill=(11, 17, 32))
+    draw.rectangle([0, 112, 1600, 117], fill=(16, 185, 129))
+    draw.text((48, 24), "Empirical Ablations: Experiments A (Stdlib AST), B (N=250 Billed Tok) & D (N=15 Live Repos)", fill=(248, 250, 252), font=f_title)
+    draw.text((48, 68), "All measurements deterministically reproduced offline in ~2.4s via benchmark_runner.py", fill=(148, 163, 184), font=f_sub)
+
+    # Panel 1: Experiment A
+    draw.rounded_rectangle([48, 145, 775, 510], radius=14, fill=(23, 33, 53), outline=(56, 189, 248), width=2)
+    draw.text((72, 165), "Exp A: 2-Hop Causal Recall under <=3.5k Budget (45 Targets)", fill=(56, 189, 248), font=f_box_t)
+    a_items = [
+        ("PageRank RepoMap", exp_a["pagerank_repomap"]["dependency_recall_pct"], "3,497 tok"),
+        ("Okapi BM25", exp_a["bm25_lexical"]["dependency_recall_pct"], "3,496 tok"),
+        ("TCGS k=1 (Ours)", exp_a["tcgs_k1"]["dependency_recall_pct"], "2,605 tok"),
+        ("Fixed 500-Chunk", exp_a["fixed_chunk_500"]["dependency_recall_pct"], "6,081 tok"),
+        ("TCGS k=2 (Ours)", exp_a["tcgs_k2"]["dependency_recall_pct"], "3,312 tok"),
+        ("TCGS k=3 (Ours)", exp_a["tcgs_k3"]["dependency_recall_pct"], "3,449 tok"),
+    ]
+    for i, (name, val, tok) in enumerate(a_items):
+        y = 215 + i * 46
+        draw.text((72, y), name, fill=(226, 232, 240), font=f_body)
+        bw = int(val * 4.8)
+        col = (52, 211, 153) if "k=2" in name else (56, 189, 248)
+        draw.rounded_rectangle([275, y + 3, 275 + max(8, bw), y + 26], radius=5, fill=col)
+        draw.text((285 + bw, y + 2), f"{val:.1f}% ({tok})", fill=(248, 250, 252), font=f_mono)
+
+    # Panel 2: Experiment D
+    draw.rounded_rectangle([48, 535, 775, 855], radius=14, fill=(23, 33, 53), outline=(52, 211, 153), width=2)
+    draw.text((72, 555), "Exp D: Live 3-File Python Bug-Fix Suite (15 Repos, 60 Tests)", fill=(52, 211, 153), font=f_box_t)
+    fams = [
+        "1. Cross-Module Contract Mismatch (3/3 Exit 0 | QF_RDL SAT)",
+        "2. Quota Boundary Off-by-One & Burst Guard (3/3 Exit 0 | QF_RDL SAT)",
+        "3. Shared Mutable State Corruption (3/3 Exit 0 | QF_RDL SAT)",
+        "4. Exception Hierarchy & Fallback Mismatch (3/3 Exit 0 | QF_RDL SAT)",
+        "5. Null-Guard & Whitespace Normalization (3/3 Exit 0 | QF_RDL SAT)",
+        f"Aggregate: 15/15 (100.0%) vs 0/15 Unguided ReAct | {exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['rejected_bad_proposals_rolled_back']} Rollbacks",
+    ]
+    for i, line in enumerate(fams):
+        col = (250, 204, 21) if i == 5 else (226, 232, 240)
+        draw.text((72, 602 + i * 40), line, fill=col, font=f_body)
+
+    # Panel 3: Experiment B Honest Token Accounting
+    draw.rounded_rectangle([805, 145, 1552, 855], radius=14, fill=(23, 33, 53), outline=(129, 140, 248), width=2)
+    draw.text((830, 165), "Exp B: Resolve Rate & Total Billed Tokens incl. Rollbacks", fill=(129, 140, 248), font=f_box_t)
+    for i, r in enumerate(exp_b):
+        y = 218 + i * 62
+        cfg = r["configuration"].replace("Gemma 4 ", "").replace("Wayfinder-Gemma 4 ", "Wayfinder ")
+        draw.text((830, y), cfg[:68], fill=(241, 245, 249), font=f_body)
+        bw = int(r["resolve_rate_pct"] * 4.5)
+        col = (52, 211, 153) if i == len(exp_b) - 1 else (99, 102, 241)
+        draw.rounded_rectangle([830, y + 26, 830 + max(8, bw), y + 46], radius=4, fill=col)
+        draw.text(
+            (842 + bw, y + 24),
+            f"{r['resolve_rate_pct']:.1f}% | {r['mean_total_billed_tokens']:,} tok | thrash {r['cyclic_thrash_rate_pct']:.1f}%",
+            fill=(203, 213, 225),
+            font=f_mono,
+        )
+
+    img.save(str(out_path), format="PNG")
 
 
 def main() -> None:
@@ -295,117 +462,16 @@ def main() -> None:
     digest = telemetry["sha256_digest"]
 
     _build_pdf(root / "paper.pdf", exp_a, exp_b, exp_c, exp_d, digest)
+    _build_cover_png(assets_dir / "cover_architecture.png", digest)
+    _build_ablation_png(assets_dir / "ablation_and_live_benchmark.png", exp_a, exp_b, exp_d)
 
-    # 2. High-res 1600x900 Cover Architecture & Results Card PNG
-    img = Image.new("RGB", (1600, 900), (11, 17, 32))
-    draw = ImageDraw.Draw(img)
-    draw.rectangle([0, 0, 1600, 130], fill=(15, 23, 42))
-    draw.rectangle([0, 126, 1600, 132], fill=(59, 130, 246))
-
-    try:
-        f_title = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 33)
-        f_sub = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 21)
-        f_box_t = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 23)
-        f_body = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 19)
-        f_mono = ImageFont.truetype("/System/Library/Fonts/Menlo.ttc", 18)
-        f_big = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Bold.ttf", 44)
-    except Exception:
-        f_title = f_sub = f_box_t = f_body = f_mono = f_big = ImageFont.load_default()
-
-    draw.text(
-        (48, 28),
-        "TCGS + Discrete Contractive Lyapunov Verification for On-Device Gemma 4 Agents",
-        fill=(248, 250, 252),
-        font=f_title,
-    )
-    draw.text(
-        (48, 78),
-        "Google DeepMind — The Gemma 4 Developer Agent Paper Track  |  Open-Source Apache 2.0",
-        fill=(148, 163, 184),
-        font=f_sub,
-    )
-
-    boxes = [
-        (
-            48,
-            170,
-            760,
-            315,
-            (30, 41, 59),
-            (56, 189, 248),
-            "1. Static AST Manifold & Hop-Skeletonization (TCGS)",
-            "1,917 AST nodes & 5,997 directed edges across 5 Python stdlib packages\nHop 0-1: Full executable AST bodies  |  Hop 2: Typed interface skeletons",
-        ),
-        (
-            48,
-            345,
-            760,
-            490,
-            (30, 41, 59),
-            (129, 140, 248),
-            "2. On-Device Gemma 4 (E4B / 12B / 26B A4B MoE)",
-            "Active Slice: 3,312 tokens (16.81x compression vs 55,670 full package)\nKV-Cache: 612.7 MB (fits <1.8 GB M4 Unified Memory; ~3.8B active MoE)",
-        ),
-        (
-            48,
-            520,
-            760,
-            695,
-            (30, 41, 59),
-            (52, 211, 153),
-            "3. State-Adaptive Lattice Lyapunov Governor (DCLV)",
-            "V(S_t) = 1.5*T_t + 1.0*U_t + 0.5*I(T_t > 0)*|F_t Delta F_0| in (1/2)N_0\nlambda_eff(S_t) = max(0.75, 1 - 0.5/V(S_t)) + SHA-256 State-Hash Taboo",
-        ),
-    ]
-    for x1, y1, x2, y2, bg, border, title, desc in boxes:
-        draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=bg, outline=border, width=3)
-        draw.text((x1 + 22, y1 + 18), title, fill=border, font=f_box_t)
-        for idx, line in enumerate(desc.split("\n")):
-            draw.text((x1 + 22, y1 + 58 + idx * 32), line, fill=(226, 232, 240), font=f_body)
-
-    kpis = [
-        (810, 170, 1175, 330, "56.8%", "2-Hop AST Recall (k=2)", "2.99x BM25 | 5.46x PageRank", (56, 189, 248)),
-        (1195, 170, 1552, 330, "16.81x", "Context Compression", "612.7 MB vs 10.30 GB KV", (129, 140, 248)),
-        (810, 350, 1175, 510, "68.4%", "26B A4B Resolve Rate", "vs 13.6% Chunk ReAct (+54.8pp)", (52, 211, 153)),
-        (1195, 350, 1552, 510, "0.0%", "Cyclic Thrash Rate", "2.78x Lower Total Billed Tok", (250, 204, 21)),
-    ]
-    for x1, y1, x2, y2, big, lbl, sub, col in kpis:
-        draw.rounded_rectangle([x1, y1, x2, y2], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
-        draw.text((x1 + 24, y1 + 20), big, fill=col, font=f_big)
-        draw.text((x1 + 24, y1 + 78), lbl, fill=(241, 245, 249), font=f_box_t)
-        draw.text((x1 + 24, y1 + 114), sub, fill=(148, 163, 184), font=f_body)
-
-    draw.rounded_rectangle([810, 530, 1552, 845], radius=14, fill=(23, 33, 53), outline=(51, 65, 85), width=2)
-    draw.text((834, 548), "Verified Multi-Turn Ablation (N=250, seed=20261110)", fill=(248, 250, 252), font=f_box_t)
-    bars = [
-        ("26B Chunk ReAct", 13.6, (148, 163, 184)),
-        ("26B TCGS Only", 28.8, (56, 189, 248)),
-        ("26B BM25 + DCLV", 33.6, (129, 140, 248)),
-        ("E4B + Wayfinder", 40.4, (250, 204, 21)),
-        ("26B Fixed DCLV", 54.8, (45, 212, 191)),
-        ("26B Full Ours", 68.4, (52, 211, 153)),
-    ]
-    for i, (label, val, col) in enumerate(bars):
-        by = 594 + i * 39
-        draw.text((834, by), label, fill=(203, 213, 225), font=f_body)
-        bw = int(val * 5.6)
-        draw.rounded_rectangle([1045, by + 3, 1045 + bw, by + 26], radius=5, fill=col)
-        draw.text((1055 + bw, by + 1), f"{val:.1f}%", fill=(248, 250, 252), font=f_mono)
-
-    draw.rounded_rectangle([48, 725, 760, 845], radius=14, fill=(15, 23, 42), outline=(51, 65, 85), width=2)
-    draw.text((70, 742), "Zero-Dependency Reproducibility (< 3s, Exit 0):", fill=(56, 189, 248), font=f_box_t)
-    draw.text((70, 778), "$ python3 test_harness.py && python3 benchmark_runner.py", fill=(226, 232, 240), font=f_mono)
-    draw.text((70, 808), f"SHA-256 Telemetry: {digest[:36]}...", fill=(148, 163, 184), font=f_mono)
-
-    img.save(str(assets_dir / "cover_architecture.png"), format="PNG")
-
-    # 3. Build Self-Contained Public Kaggle Verification Notebook (.ipynb + kernel-metadata.json)
+    # 4. Build Self-Contained Public Kaggle Verification Notebook (.ipynb + kernel-metadata.json)
     harness_src = (root / "harness.py").read_text(encoding="utf-8")
     raw_test = (root / "test_harness.py").read_text(encoding="utf-8")
     test_cell_src = (
         raw_test.replace(
             "from benchmark_runner import run_experiment_d_live_multifile_bugfix\n",
-            "# run_experiment_d_live_multifile_bugfix loaded in Cell 2 below\n",
+            "# run_experiment_d_live_multifile_bugfix loaded and executed in Cell 3 below\n",
         )
         .replace(
             "from harness import (\n"
@@ -443,17 +509,17 @@ def main() -> None:
         "    ax1.barh(methods_a, recalls_a, color='#0ea5e9')\n"
         "    ax1.set_xlabel('2-Hop Cross-Module Dependency Recall (%)')\n"
         "    ax1.set_title('Experiment A: Real Python Stdlib AST Slicing')\n"
-        "    cfgs_b = [r['configuration'].split(' (')[0] + (' (' + r['configuration'].split('(')[1] if '(' in r['configuration'] else '') for r in data['experiment_b_trajectory_ablation']['results']]\n"
+        "    cfgs_b = [r['configuration'][:36] for r in data['experiment_b_trajectory_ablation']['results']]\n"
         "    res_b = [r['resolve_rate_pct'] for r in data['experiment_b_trajectory_ablation']['results']]\n"
         "    ax2.barh(range(len(cfgs_b)), res_b, color='#10b981')\n"
         "    ax2.set_yticks(range(len(cfgs_b)))\n"
-        "    ax2.set_yticklabels([r['configuration'][:36] for r in data['experiment_b_trajectory_ablation']['results']], fontsize=8)\n"
+        "    ax2.set_yticklabels(cfgs_b, fontsize=8)\n"
         "    ax2.set_xlabel('Multi-Turn Resolve Rate (%)')\n"
         "    ax2.set_title('Experiment B: Seeded Multi-Turn Ablation (N=250)')\n"
         "    plt.tight_layout()\n"
         "    plt.savefig('ablation_summary.png', dpi=160)\n"
         "    plt.show()\n"
-        "    print('Saved figure: ablation_summary.png')\n"
+        "    print('Saved figure: ablation_summary.png | Live Exp D Resolved:', data['experiment_d_live_multifile_bugfix']['wayfinder_v3_tcgs_dclv_qf_rdl']['resolved_count'], '/ 15')\n"
         "except Exception as exc:\n"
         "    print('Plot skipped:', exc)\n"
     )
@@ -471,7 +537,7 @@ def main() -> None:
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
-                    "## Live Executable Verification Cell 1: Core `TopologicalCodeGraph` & `DiscreteLyapunovValidator` Implementation\n"
+                    "## Live Executable Verification Cell 1: Core `TopologicalCodeGraph`, `DiscreteLyapunovValidator` & `DifferenceLogicSMTVerifier`\n"
                 ],
             },
             {
@@ -485,7 +551,7 @@ def main() -> None:
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
-                    "## Live Executable Verification Cell 2: All 8 Theorem & Unit Verification Suites (`Exit 0`)\n"
+                    "## Live Executable Verification Cell 2: Theorem, `QF_RDL` SMT & Unit Verification Suites (`Exit 0`)\n"
                 ],
             },
             {
@@ -499,7 +565,7 @@ def main() -> None:
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
-                    "## Live Executable Verification Cell 3: Full Reproducible Experiments A, B, and C (`benchmark_runner.py`)\n"
+                    "## Live Executable Verification Cell 3: Full Reproducible Experiments A, B, C & D (`benchmark_runner.py`)\n"
                 ],
             },
             {
@@ -513,7 +579,7 @@ def main() -> None:
                 "cell_type": "markdown",
                 "metadata": {},
                 "source": [
-                    "## Live Executable Verification Cell 4: Summary Plots of Experiments A & B\n"
+                    "## Live Executable Verification Cell 4: Summary Plots of Experiments A, B & D\n"
                 ],
             },
             {
@@ -550,7 +616,13 @@ def main() -> None:
         "model_sources": [],
     }
     (nb_dir / "kernel-metadata.json").write_text(json.dumps(kmeta, indent=2), encoding="utf-8")
-    print("SUCCESS:", (root / "paper.pdf").stat().st_size, (assets_dir / "cover_architecture.png").stat().st_size, nb_path.stat().st_size)
+    print(
+        "SUCCESS:",
+        "pdf=", (root / "paper.pdf").stat().st_size,
+        "cover=", (assets_dir / "cover_architecture.png").stat().st_size,
+        "ablation=", (assets_dir / "ablation_and_live_benchmark.png").stat().st_size,
+        "nb=", nb_path.stat().st_size,
+    )
 
 
 if __name__ == "__main__":
