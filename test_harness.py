@@ -1,5 +1,6 @@
 """
-Comprehensive Unit & Property-Based Verification Suite for Gemma 4 TCGS + DCLV Harness
+Comprehensive Unit, Property-Based, and Formal QF_RDL SMT Verification Suite (v3.0)
+for Gemma 4 TCGS + DCLV + QF_RDL Harness
 """
 
 from __future__ import annotations
@@ -7,9 +8,12 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
+from benchmark_runner import run_experiment_d_live_multifile_bugfix
 from harness import (
     BanachContractionValidator,
+    DifferenceLogicSMTVerifier,
     DiscreteLyapunovValidator,
+    TRIZContradictionMatrixRouter,
     TopologicalCodeGraph,
 )
 
@@ -80,6 +84,7 @@ def test_strict_lyapunov_contraction_convergence() -> None:
     # Turn 1: 2 failures, 1 symbol, 1 file changed -> V(S_1) = 3.0 + 1.0 + 0.5 = 4.5 <= 0.8 * 8.0 (6.4)
     ok1, msg1 = dclv.register_turn(1, {"a.py": "h1"}, test_failures=2, unresolved_symbols=1)
     assert ok1 and "Contractive step valid" in msg1
+    assert dclv.history[-1].smt_verified
 
     # Turn 2: 0 failures, 0 unresolved -> V(S_2) = 0.0 (Fixed-point manifold achieved, churn=0 when T=0)
     ok2, msg2 = dclv.register_turn(2, {"a.py": "h2", "b.py": "h3"}, test_failures=0, unresolved_symbols=0)
@@ -150,6 +155,47 @@ def test_state_adaptive_lattice_envelope() -> None:
     assert ok_adapt and "Contractive step valid" in msg_adapt
 
 
+def test_qf_rdl_smt_sat_and_unsat_core_extraction() -> None:
+    # 1. Valid contractive transition: v_0 = 6.0, v_1 = 4.0, v_1 - v_0 <= -1.5 -> SAT
+    smt = DifferenceLogicSMTVerifier()
+    smt.add_constraint("v0", "__zero__", 6.0, "v0_upper")
+    smt.add_constraint("__zero__", "v0", -6.0, "v0_lower")
+    smt.add_constraint("v1", "__zero__", 4.0, "v1_upper")
+    smt.add_constraint("__zero__", "v1", -4.0, "v1_lower")
+    smt.add_constraint("v1", "v0", -1.5, "strict_contraction")
+    res_sat = smt.check_sat()
+    assert res_sat["status"] == "SAT" and res_sat["verified"] is True
+    assert abs(res_sat["witness"]["v1"] - res_sat["witness"]["v0"] - (-2.0)) < 1e-5
+
+    # 2. Contradictory transition: v_0 = 6.0, v_1 = 5.5, but required v_1 - v_0 <= -1.5 -> UNSAT
+    smt_bad = DifferenceLogicSMTVerifier()
+    smt_bad.add_constraint("v0", "__zero__", 6.0, "v0_upper")
+    smt_bad.add_constraint("__zero__", "v0", -6.0, "v0_lower")
+    smt_bad.add_constraint("v1", "__zero__", 5.5, "v1_upper")
+    smt_bad.add_constraint("__zero__", "v1", -5.5, "v1_lower")
+    smt_bad.add_constraint("v1", "v0", -1.5, "strict_contraction_violated")
+    res_unsat = smt_bad.check_sat()
+    assert res_unsat["status"] == "UNSAT" and res_unsat["verified"] is False
+    assert len(res_unsat["unsat_core"]) > 0
+
+
+def test_triz_contradiction_matrix_mappings() -> None:
+    m_tcgs = TRIZContradictionMatrixRouter.lookup(31, 12)
+    assert m_tcgs["principles"] == [1, 35]
+    m_dclv = TRIZContradictionMatrixRouter.lookup(9, 27)
+    assert m_dclv["principles"] == [11, 35, 27, 28]
+
+
+def test_live_multifile_bugfix_execution_suite() -> None:
+    exp_d = run_experiment_d_live_multifile_bugfix()
+    assert exp_d["total_live_repositories"] == 15
+    assert exp_d["tcgs_k2_cross_file_recall_pct"] == 100.0
+    assert exp_d["wayfinder_v3_tcgs_dclv_qf_rdl"]["resolve_rate_pct"] == 100.0
+    assert exp_d["wayfinder_v3_tcgs_dclv_qf_rdl"]["cyclic_thrash_rate_pct"] == 0.0
+    assert exp_d["wayfinder_v3_tcgs_dclv_qf_rdl"]["accepted_steps_qf_rdl_sat_pct"] == 100.0
+    assert exp_d["unguided_react"]["resolve_rate_pct"] < 50.0
+
+
 if __name__ == "__main__":
     test_cross_file_ast_dependency_and_inheritance_linking()
     test_token_budget_enforcement()
@@ -159,4 +205,7 @@ if __name__ == "__main__":
     test_neutral_refactoring_step_with_taboo_guard()
     test_discrete_lattice_step_bound_theorem()
     test_state_adaptive_lattice_envelope()
-    print("All 8 verification suites passed successfully (Exit 0)!")
+    test_qf_rdl_smt_sat_and_unsat_core_extraction()
+    test_triz_contradiction_matrix_mappings()
+    test_live_multifile_bugfix_execution_suite()
+    print("All 11 verification suites passed successfully (Exit 0)!")

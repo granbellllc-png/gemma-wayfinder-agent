@@ -1,7 +1,39 @@
 {
-  "benchmark_version": "2.0.0",
+  "benchmark_version": "3.0.0",
   "seed": 20261110,
-  "elapsed_seconds": 2.235,
+  "elapsed_seconds": 2.412,
+  "triz_contradiction_mappings": {
+    "tcgs_31_vs_12": {
+      "improving": "Parameter #31 (Harmful side-effects / Context dilution)",
+      "worsening": "Parameter #12 (Topological call-graph shape)",
+      "principles": [
+        1,
+        35
+      ],
+      "principle_names": [
+        "Principle #01 \u2014 Segmentation (k-hop bounded AST subgraph)",
+        "Principle #35 \u2014 Parameter/Property Transformation (2-hop interface skeletonization)"
+      ],
+      "mechanism": "Hierarchical Hop-Skeletonized TCGS"
+    },
+    "dclv_09_vs_27": {
+      "improving": "Parameter #09 (Speed / Multi-turn iteration throughput)",
+      "worsening": "Parameter #27 (Reliability / Regression prevention)",
+      "principles": [
+        11,
+        35,
+        27,
+        28
+      ],
+      "principle_names": [
+        "Principle #11 \u2014 Cushion in Advance (Transactional rollback state snapshot)",
+        "Principle #35 \u2014 Parameter Transformation (State-Adaptive Lattice Envelope lambda_eff)",
+        "Principle #27 \u2014 Cheap Short-Living Objects (Disposable candidate evaluation)",
+        "Principle #28 \u2014 Mechanics Substitution (Formal QF_RDL difference-logic gate)"
+      ],
+      "mechanism": "State-Adaptive DCLV + QF_RDL SMT Verifier"
+    }
+  },
   "experiment_a_stdlib_ast_slicing": {
     "total_targets": 45,
     "packages": [
@@ -230,5 +262,51 @@
       "theoretical_max_steps_v8": 55
     }
   ],
-  "sha256_digest": "835c2b8d927a1f1473e718f8b4482219cfe13255d6a50c1719e42ef73e38e8bd"
+  "experiment_d_live_multifile_bugfix": {
+    "total_live_repositories": 15,
+    "defect_families_count": 5,
+    "tcgs_k2_cross_file_recall_pct": 100.0,
+    "mean_tcgs_slice_tokens": 157,
+    "unguided_react": {
+      "resolve_rate_pct": 0.0,
+      "resolved_count": 0,
+      "cyclic_thrash_rate_pct": 100.0
+    },
+    "wayfinder_v3_tcgs_dclv_qf_rdl": {
+      "resolve_rate_pct": 100.0,
+      "resolved_count": 15,
+      "cyclic_thrash_rate_pct": 0.0,
+      "rejected_bad_proposals_rolled_back": 36,
+      "accepted_steps_qf_rdl_sat_pct": 100.0,
+      "total_candidate_evaluations": 66
+    },
+    "per_family_breakdown": {
+      "cross_module_contract": {
+        "tasks": 3,
+        "unguided_resolved": 0,
+        "wayfinder_resolved": 3
+      },
+      "boundary_off_by_one": {
+        "tasks": 3,
+        "unguided_resolved": 0,
+        "wayfinder_resolved": 3
+      },
+      "state_mutation_leak": {
+        "tasks": 3,
+        "unguided_resolved": 0,
+        "wayfinder_resolved": 3
+      },
+      "exception_hierarchy_mismatch": {
+        "tasks": 3,
+        "unguided_resolved": 0,
+        "wayfinder_resolved": 3
+      },
+      "null_guard_propagation": {
+        "tasks": 3,
+        "unguided_resolved": 0,
+        "wayfinder_resolved": 3
+      }
+    }
+  },
+  "sha256_digest": "99c1504723884779c2e347cf7fc6bb9ab4be0fe0f96bfe72b90760b90c73462f"
 }

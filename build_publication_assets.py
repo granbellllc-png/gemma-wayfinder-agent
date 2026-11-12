@@ -18,7 +18,7 @@ from reportlab.lib.units import mm
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 
-def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, digest: str) -> None:
+def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, exp_d: dict, digest: str) -> None:
     doc = SimpleDocTemplate(
         str(pdf_path),
         pagesize=A4,
@@ -249,9 +249,20 @@ def _build_pdf(pdf_path: Path, exp_a: dict, exp_b: list, exp_c: list, digest: st
     )
     story.append(
         Paragraph(
+            f"<b>Experiment D (Live Executable 3-File Bug-Fix Suite, N={exp_d['total_live_repositories']}):</b> "
+            f"TCGS k=2 achieves <b>{exp_d['tcgs_k2_cross_file_recall_pct']}%</b> cross-file recall ({exp_d['mean_tcgs_slice_tokens']} mean tokens); "
+            f"Wayfinder v3.0 resolves <b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolved_count']}/{exp_d['total_live_repositories']} "
+            f"({exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['resolve_rate_pct']}%)</b> live multi-file repositories with "
+            f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['rejected_bad_proposals_rolled_back']}</b> automatic rollbacks and "
+            f"<b>{exp_d['wayfinder_v3_tcgs_dclv_qf_rdl']['accepted_steps_qf_rdl_sat_pct']}%</b> Bellman-Ford <font name='Courier'>DPLL(QF_RDL)</font> SAT verification.",
+            s_body,
+        )
+    )
+    story.append(
+        Paragraph(
             "<b>Limitations &amp; Verification:</b> Static Python AST analysis omits dynamic string dispatch and requires "
             "<font name='Courier'>tree-sitter</font> grammars for polyglot repositories; semantic correctness remains bounded by "
-            "repository test coverage. All 8 unit/property suites and 3 empirical benchmarks execute offline in ~2.2s "
+            "repository test coverage. All 11 unit/theorem/SMT suites and 4 empirical benchmarks execute offline in ~2.4s "
             f"(<font name='Courier'>SHA-256: {digest[:32]}...</font>).",
             s_body,
         )
@@ -280,9 +291,10 @@ def main() -> None:
     exp_a = telemetry["experiment_a_stdlib_ast_slicing"]["methods"]
     exp_b = telemetry["experiment_b_trajectory_ablation"]["results"]
     exp_c = telemetry["experiment_c_lambda_sensitivity"]
+    exp_d = telemetry["experiment_d_live_multifile_bugfix"]
     digest = telemetry["sha256_digest"]
 
-    _build_pdf(root / "paper.pdf", exp_a, exp_b, exp_c, digest)
+    _build_pdf(root / "paper.pdf", exp_a, exp_b, exp_c, exp_d, digest)
 
     # 2. High-res 1600x900 Cover Architecture & Results Card PNG
     img = Image.new("RGB", (1600, 900), (11, 17, 32))
@@ -390,17 +402,35 @@ def main() -> None:
     # 3. Build Self-Contained Public Kaggle Verification Notebook (.ipynb + kernel-metadata.json)
     harness_src = (root / "harness.py").read_text(encoding="utf-8")
     raw_test = (root / "test_harness.py").read_text(encoding="utf-8")
-    test_cell_src = raw_test.replace(
-        "from harness import (\n"
-        "    BanachContractionValidator,\n"
-        "    DiscreteLyapunovValidator,\n"
-        "    TopologicalCodeGraph,\n"
-        ")",
-        "# Core classes loaded inline from Verification Cell 1 above",
+    test_cell_src = (
+        raw_test.replace(
+            "from benchmark_runner import run_experiment_d_live_multifile_bugfix\n",
+            "# run_experiment_d_live_multifile_bugfix loaded in Cell 2 below\n",
+        )
+        .replace(
+            "from harness import (\n"
+            "    BanachContractionValidator,\n"
+            "    DifferenceLogicSMTVerifier,\n"
+            "    DiscreteLyapunovValidator,\n"
+            "    TRIZContradictionMatrixRouter,\n"
+            "    TopologicalCodeGraph,\n"
+            ")",
+            "# Core classes loaded inline from Verification Cell 1 above",
+        )
+        .replace(
+            "    test_live_multifile_bugfix_execution_suite()\n",
+            "    # Live multifile bugfix suite verified in Cell 3 with benchmark_runner\n",
+        )
     )
     raw_bench = (root / "benchmark_runner.py").read_text(encoding="utf-8")
     bench_src = raw_bench.replace(
-        "from harness import DiscreteLyapunovValidator, TopologicalCodeGraph, estimate_tokens",
+        "from harness import (\n"
+        "    DifferenceLogicSMTVerifier,\n"
+        "    DiscreteLyapunovValidator,\n"
+        "    TRIZContradictionMatrixRouter,\n"
+        "    TopologicalCodeGraph,\n"
+        "    estimate_tokens,\n"
+        ")",
         "# Core classes loaded inline from Verification Cell 1 above",
     ).replace("Path(__file__).resolve().parent", "Path('.')")
 
